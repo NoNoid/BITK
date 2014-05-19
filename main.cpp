@@ -1,193 +1,128 @@
-#include <iostream> // for standard I/O
-#include <string>   // for strings
-#include <iomanip>  // for controlling float print precision
-#include <sstream>  // string to number conversion
+#include "opencv2/opencv.hpp"
 
-#include <opencv2/core/core.hpp>        // Basic OpenCV structures (cv::Mat, Scalar)
-#include <opencv2/imgproc/imgproc.hpp>  // Gaussian Blur
-#include <opencv2/highgui/highgui.hpp>  // OpenCV window I/O
+#include <stdio.h>  /* defines FILENAME_MAX */
+#ifdef WINDOWS
+    #include <direct.h>
+    #define GetCurrentDir _getcwd
+#else
+    #include <unistd.h>
+    #define GetCurrentDir getcwd
+ #endif
 
-using namespace std;
 using namespace cv;
 
-double getPSNR ( const Mat& I1, const Mat& I2);
-Scalar getMSSIM( const Mat& I1, const Mat& I2);
-
-int main(int argc, char *argv[])
+int main(int, char**)
 {
-    //help();
+    //diable printf() buffering
+    setbuf(stdout, NULL);
 
-    if (argc != 5)
+    char cCurrentPath[FILENAME_MAX];
+
+    if (!GetCurrentDir(cCurrentPath, sizeof(cCurrentPath)))
     {
-        cout << "Not enough parameters" << endl;
         return -1;
     }
 
-    stringstream conv;
+    cCurrentPath[sizeof(cCurrentPath) - 1] = '\0'; /* not really required */
 
-    const string sourceReference = argv[1], sourceCompareWith = argv[2];
-    int psnrTriggerValue, delay;
-    conv << argv[3] << endl << argv[4];       // put in the strings
-    conv >> psnrTriggerValue >> delay;        // take out the numbers
-
-    char c;
-    int frameNum = -1;          // Frame counter
-
-    VideoCapture captRefrnc(sourceReference), captUndTst(sourceCompareWith);
-
-    if (!captRefrnc.isOpened())
+    std::string videoFileName = "videos/Megamind.avi";
+    VideoCapture videoHandle(videoFileName); // open the default camera
+    if(!videoHandle.isOpened())  // check if we succeeded
     {
-        cout  << "Could not open reference " << sourceReference << endl;
+        printf ("Could not find File: %s/%s\n", cCurrentPath,videoFileName.c_str());
         return -1;
     }
 
-    if (!captUndTst.isOpened())
+    Size videoDimensions = Size((int) videoHandle.get(CV_CAP_PROP_FRAME_WIDTH),
+                                (int) videoHandle.get(CV_CAP_PROP_FRAME_HEIGHT));
+    printf("VideoWidth: %d,VideoHeight: %d\n",videoDimensions.width,videoDimensions.height);
+
+    unsigned int numberOfVideoFrames = videoHandle.get(CV_CAP_PROP_FRAME_COUNT);
+    printf("number of Frames: %d\n",numberOfVideoFrames);
+
+    std::string drawFrameWindowName("DrawFrame"),ROIWindowName("ROIWindow"),matchingWindowName("ResultOfMatching");
+
+    namedWindow(drawFrameWindowName,CV_WINDOW_AUTOSIZE);
+    namedWindow(ROIWindowName,CV_WINDOW_AUTOSIZE);
+    namedWindow(matchingWindowName,CV_WINDOW_AUTOSIZE);
+
+    // define location of sub matrices in image
+    Rect regionOfInterest( 100, 100, 100, 100 );
+    cv::Point *bestMatchPositionsByFrame = new cv::Point[numberOfVideoFrames];
+
+//    Mat edges;
+
+    for(unsigned int i = 0; i < numberOfVideoFrames; ++i)
     {
-        cout  << "Could not open case test " << sourceCompareWith << endl;
-        return -1;
-    }
+        Mat frame;
+        // get a new frame from camera
+        videoHandle >> frame;
 
-    Size refS = Size((int) captRefrnc.get(CV_CAP_PROP_FRAME_WIDTH),
-                     (int) captRefrnc.get(CV_CAP_PROP_FRAME_HEIGHT)),
-         uTSi = Size((int) captUndTst.get(CV_CAP_PROP_FRAME_WIDTH),
-                     (int) captUndTst.get(CV_CAP_PROP_FRAME_HEIGHT));
+//        cvtColor(frame, edges, CV_BGR2GRAY);
+//        GaussianBlur(edges, edges, Size(7,7), 1.5, 1.5);
+//        Canny(edges, edges, 0, 30, 3);
 
-    if (refS != uTSi)
-    {
-        cout << "Inputs have different size!!! Closing." << endl;
-        return -1;
-    }
+        // define sub matrices in main matrix
+        Mat RegionOfInterestMatrix(frame,regionOfInterest);
 
-    const char* WIN_UT = "Under Test";
-    const char* WIN_RF = "Reference";
+        int result_cols =  frame.cols - RegionOfInterestMatrix.cols + 1;
+        int result_rows = frame.rows - RegionOfInterestMatrix.rows + 1;
 
-    // Windows
-    namedWindow(WIN_RF, CV_WINDOW_AUTOSIZE);
-    namedWindow(WIN_UT, CV_WINDOW_AUTOSIZE);
-    cvMoveWindow(WIN_RF, 400       , 0);         //750,  2 (bernat =0)
-    cvMoveWindow(WIN_UT, refS.width, 0);         //1500, 2
+        Mat result(result_cols,result_rows,CV_32FC1);
 
-    cout << "Reference frame resolution: Width=" << refS.width << "  Height=" << refS.height
-         << " of nr#: " << captRefrnc.get(CV_CAP_PROP_FRAME_COUNT) << endl;
+        /// Do the Matching and Normalize
+        matchTemplate( frame, RegionOfInterestMatrix, result, CV_TM_CCOEFF_NORMED );
+        normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat());
 
-    cout << "PSNR trigger value " << setiosflags(ios::fixed) << setprecision(3)
-         << psnrTriggerValue << endl;
+        double minVal, maxVal;
+        Point minLoc, maxLoc, matchLoc;
 
-    Mat frameReference, frameUnderTest;
-    double psnrV;
-    Scalar mssimV;
+        minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, Mat());
 
-    for(;;) //Show the image captured in the window and repeat
-    {
-        captRefrnc >> frameReference;
-        captUndTst >> frameUnderTest;
+        matchLoc = minLoc;
+        bestMatchPositionsByFrame[i] = matchLoc;
+        bestMatchPositionsByFrame[i].x += regionOfInterest.width/2;
+        bestMatchPositionsByFrame[i].y += regionOfInterest.height/2;
 
-        if (frameReference.empty() || frameUnderTest.empty())
+        regionOfInterest.x = matchLoc.x - regionOfInterest.width/2;
+        regionOfInterest.y = matchLoc.y - regionOfInterest.height/2;
+
+        if(regionOfInterest.x <= 0)
+            regionOfInterest.x = 0;
+
+        if(regionOfInterest.x >= videoDimensions.width-regionOfInterest.width)
+            regionOfInterest.x = videoDimensions.width-regionOfInterest.width;
+
+        if(regionOfInterest.y <= 0)
+            regionOfInterest.y = 0;
+
+        if(regionOfInterest.y >= videoDimensions.height-regionOfInterest.height)
+            regionOfInterest.y = videoDimensions.height-regionOfInterest.height;
+
+        Mat drawFrame;
+        frame.copyTo(drawFrame);
+        if(i > 2)
         {
-            cout << " < < <  Game over!  > > > ";
-            break;
+            for(int j = 2;j<=i;++j)
+            {
+                line(drawFrame,bestMatchPositionsByFrame[j-1],bestMatchPositionsByFrame[j],Scalar( 0, 255, 255 ),2,8);
+            }
         }
+//        if(i > 1)
+//        line(drawFrame,bestMatchPositionsByFrame[i-1],bestMatchPositionsByFrame[i],Scalar( 255, 255, 255 ),2,8);
 
-        ++frameNum;
-        cout << "Frame: " << frameNum << "# ";
+        printf("best Match Position: %d , %d\n",matchLoc.x,matchLoc.y);
 
-        ///////////////////////////////// PSNR ////////////////////////////////////////////////////
-        psnrV = getPSNR(frameReference,frameUnderTest);
-        cout << setiosflags(ios::fixed) << setprecision(3) << psnrV << "dB";
+        imshow(drawFrameWindowName, drawFrame);
+        imshow(ROIWindowName, RegionOfInterestMatrix);
+        imshow(matchingWindowName, result );
 
-        //////////////////////////////////// MSSIM /////////////////////////////////////////////////
-        if (psnrV < psnrTriggerValue && psnrV)
-        {
-            mssimV = getMSSIM(frameReference, frameUnderTest);
-
-            cout << " MSSIM: "
-                << " R " << setiosflags(ios::fixed) << setprecision(2) << mssimV.val[2] * 100 << "%"
-                << " G " << setiosflags(ios::fixed) << setprecision(2) << mssimV.val[1] * 100 << "%"
-                << " B " << setiosflags(ios::fixed) << setprecision(2) << mssimV.val[0] * 100 << "%";
-        }
-
-        cout << endl;
-
-        ////////////////////////////////// Show Image /////////////////////////////////////////////
-        imshow(WIN_RF, frameReference);
-        imshow(WIN_UT, frameUnderTest);
-
-        c = (char)cvWaitKey(delay);
-        if (c == 27) break;
+        if(waitKey(30) >= 0) break;
     }
 
+    delete[] bestMatchPositionsByFrame;
+
+    // the camera will be deinitialized automatically in VideoCapture destructor
     return 0;
 }
 
-double getPSNR(const Mat& I1, const Mat& I2)
-{
-    Mat s1;
-    absdiff(I1, I2, s1);       // |I1 - I2|
-    s1.convertTo(s1, CV_32F);  // cannot make a square on 8 bits
-    s1 = s1.mul(s1);           // |I1 - I2|^2
-
-    Scalar s = sum(s1);        // sum elements per channel
-
-    double sse = s.val[0] + s.val[1] + s.val[2]; // sum channels
-
-    if( sse <= 1e-10) // for small values return zero
-        return 0;
-    else
-    {
-        double mse  = sse / (double)(I1.channels() * I1.total());
-        double psnr = 10.0 * log10((255 * 255) / mse);
-        return psnr;
-    }
-}
-
-Scalar getMSSIM( const Mat& i1, const Mat& i2)
-{
-    const double C1 = 6.5025, C2 = 58.5225;
-    /***************************** INITS **********************************/
-    int d = CV_32F;
-
-    Mat I1, I2;
-    i1.convertTo(I1, d);            // cannot calculate on one byte large values
-    i2.convertTo(I2, d);
-
-    Mat I2_2   = I2.mul(I2);        // I2^2
-    Mat I1_2   = I1.mul(I1);        // I1^2
-    Mat I1_I2  = I1.mul(I2);        // I1 * I2
-
-    /*************************** END INITS **********************************/
-
-    Mat mu1, mu2;                   // PRELIMINARY COMPUTING
-    GaussianBlur(I1, mu1, Size(11, 11), 1.5);
-    GaussianBlur(I2, mu2, Size(11, 11), 1.5);
-
-    Mat mu1_2   =   mu1.mul(mu1);
-    Mat mu2_2   =   mu2.mul(mu2);
-    Mat mu1_mu2 =   mu1.mul(mu2);
-
-    Mat sigma1_2, sigma2_2, sigma12;
-
-    GaussianBlur(I1_2, sigma1_2, Size(11, 11), 1.5);
-    sigma1_2 -= mu1_2;
-
-    GaussianBlur(I2_2, sigma2_2, Size(11, 11), 1.5);
-    sigma2_2 -= mu2_2;
-
-    GaussianBlur(I1_I2, sigma12, Size(11, 11), 1.5);
-    sigma12 -= mu1_mu2;
-
-    ///////////////////////////////// FORMULA ////////////////////////////////
-    Mat t1, t2, t3;
-
-    t1 = 2 * mu1_mu2 + C1;
-    t2 = 2 * sigma12 + C2;
-    t3 = t1.mul(t2);                 // t3 = ((2*mu1_mu2 + C1).*(2*sigma12 + C2))
-
-    t1 = mu1_2 + mu2_2 + C1;
-    t2 = sigma1_2 + sigma2_2 + C2;
-    t1 = t1.mul(t2);                 // t1 =((mu1_2 + mu2_2 + C1).*(sigma1_2 + sigma2_2 + C2))
-
-    Mat ssim_map;
-    divide(t3, t1, ssim_map);        // ssim_map =  t3./t1;
-
-    Scalar mssim = mean(ssim_map);   // mssim = average of ssim map
-}
