@@ -11,13 +11,8 @@
 
 using namespace cv;
 
-Rect crateSearchFrameFromRegionOfInterest(Size videoDimensions, Rect regionOfInterest)
+void clampRectangleToVideoDemensions(Rect &searchFrame,const Size &videoDimensions)
 {
-    Rect searchFrame(
-                regionOfInterest.x-(regionOfInterest.width/2),
-                regionOfInterest.y-(regionOfInterest.height/2),
-                2*regionOfInterest.width,
-                2*regionOfInterest.height);
     if(searchFrame.x <= 0)
         searchFrame.x = 0;
 
@@ -29,8 +24,32 @@ Rect crateSearchFrameFromRegionOfInterest(Size videoDimensions, Rect regionOfInt
 
     if(searchFrame.y >= videoDimensions.height-searchFrame.height)
         searchFrame.y = videoDimensions.height-searchFrame.height;
+}
+
+Rect crateSearchFrameFromRegionOfInterest(const Rect &regionOfInterest,const Size &videoDimensions)
+{
+    Rect searchFrame(
+                regionOfInterest.x-(regionOfInterest.width/2),
+                regionOfInterest.y-(regionOfInterest.height/2),
+                2*regionOfInterest.width,
+                2*regionOfInterest.height);
+    clampRectangleToVideoDemensions(searchFrame, videoDimensions);
 
     return searchFrame;
+}
+
+void DrawPoint( Mat &img,const Point &center,const Scalar &Color)
+{
+ int thickness = -1;
+ int lineType = 8;
+ double radius = 5.0;
+
+ circle( img,
+         center,
+         radius,
+         Color,
+         thickness,
+         lineType );
 }
 
 void drawRectangle(const Rect &rectangleToDraw,Mat &matrixToDrawTheRectangleIn,const Scalar &color)
@@ -57,11 +76,40 @@ void drawRectangle(const Rect &rectangleToDraw,Mat &matrixToDrawTheRectangleIn,c
          2,8);
 }
 
+Point match(const Mat &RegionOfInterestMatrix,const Mat &SearchFrameMatrix)
+{
+    int resultCols =  SearchFrameMatrix.cols - RegionOfInterestMatrix.cols + 1;
+    int resultRows = SearchFrameMatrix.rows - RegionOfInterestMatrix.rows + 1;
+
+    Mat result(resultCols,resultRows,CV_32FC1);
+
+    /// Do the Matching and Normalize
+    matchTemplate( SearchFrameMatrix, RegionOfInterestMatrix, result, CV_TM_CCOEFF_NORMED );
+    normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat());
+
+    double minVal, maxVal;
+    Point minLoc, maxLoc, matchLoc;
+
+    minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, Mat());
+
+    return minLoc;
+}
+
+void createNewRegionOfInterestFromMatchLocation(const Point &matchLoc,Rect &regionOfInterest,const Size &videoDimensions)
+{
+    regionOfInterest = Rect(
+                matchLoc.x-regionOfInterest.width/2,
+                matchLoc.y-regionOfInterest.height/2,
+                regionOfInterest.width,
+                regionOfInterest.height);
+    clampRectangleToVideoDemensions(regionOfInterest,videoDimensions);
+}
+
 int main(int, char**)
 {
     //diable printf() buffering
     setbuf(stdout, NULL);
-    printf("press 'c' to close");
+    printf("press 'c' to close\n");
 
     char cCurrentPath[FILENAME_MAX];
 
@@ -90,12 +138,14 @@ int main(int, char**)
     std::string drawFrameWindowName("DrawFrame"),ROIWindowName("ROIWindow"),matchingWindowName("ResultOfMatching");
 
     namedWindow(drawFrameWindowName,CV_WINDOW_AUTOSIZE);
-    namedWindow(ROIWindowName,CV_WINDOW_AUTOSIZE);
-    namedWindow(matchingWindowName,CV_WINDOW_AUTOSIZE);
+//    namedWindow(ROIWindowName,CV_WINDOW_AUTOSIZE);
+//    namedWindow(matchingWindowName,CV_WINDOW_AUTOSIZE);
 
     // define location of sub matrices in image
-    Rect regionOfInterest( videoDimensions.width/2, videoDimensions.height/2, 50, 50 );
-    Rect searchFrame = crateSearchFrameFromRegionOfInterest(videoDimensions, regionOfInterest);
+    Rect regionOfInterest( videoDimensions.width/2-100, videoDimensions.height/2-50, 50, 50 );
+    Scalar regionOfInterestColor(255,0,0);
+    Rect searchFrame;
+    Scalar searchFrameColor(0,255,0);
 
     cv::Point *bestMatchPositionsByFrame = new cv::Point[numberOfVideoFrames];
 
@@ -109,71 +159,32 @@ int main(int, char**)
         // get a new frame from camera
         videoHandle >> frame;
 
-//        cvtColor(frame, edges, CV_BGR2GRAY);
-//        GaussianBlur(edges, edges, Size(7,7), 1.5, 1.5);
-//        Canny(edges, edges, 0, 30, 3);
-        searchFrame = crateSearchFrameFromRegionOfInterest(videoDimensions, regionOfInterest);
-        Mat searchRegion(frame,searchFrame);
-
-        // define sub matrices in main matrix
-        Mat RegionOfInterestMatrix(frame,regionOfInterest);
-
-        int result_cols =  searchRegion.cols - RegionOfInterestMatrix.cols + 1;
-        int result_rows = searchRegion.rows - RegionOfInterestMatrix.rows + 1;
-
-        Mat result(result_cols,result_rows,CV_32FC1);
-
-        /// Do the Matching and Normalize
-        matchTemplate( searchRegion, RegionOfInterestMatrix, result, CV_TM_CCOEFF_NORMED );
-        normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat());
-
-        double minVal, maxVal;
-        Point minLoc, maxLoc, matchLoc;
-
-        minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, Mat());
-
-        matchLoc = minLoc;
-        oldMatchLoc = matchLoc;
-        bestMatchPositionsByFrame[i] = matchLoc;
-        bestMatchPositionsByFrame[i].x += regionOfInterest.width/2;
-        bestMatchPositionsByFrame[i].y += regionOfInterest.height/2;
-
-        regionOfInterest.x = matchLoc.x - regionOfInterest.width/2;
-        regionOfInterest.y = matchLoc.y - regionOfInterest.height/2;
-
-        if(regionOfInterest.x <= 0)
-            regionOfInterest.x = 0;
-
-        if(regionOfInterest.x >= videoDimensions.width-regionOfInterest.width)
-            regionOfInterest.x = videoDimensions.width-regionOfInterest.width;
-
-        if(regionOfInterest.y <= 0)
-            regionOfInterest.y = 0;
-
-        if(regionOfInterest.y >= videoDimensions.height-regionOfInterest.height)
-            regionOfInterest.y = videoDimensions.height-regionOfInterest.height;
-
+        // create Matrix we can draw into without overwriting data of the original image
         Mat drawFrame;
         frame.copyTo(drawFrame);
-        if(i > 2)
-        {
-            for(int j = 2;j<=i;++j)
-            {
-                line(drawFrame,bestMatchPositionsByFrame[j-1],bestMatchPositionsByFrame[j],Scalar( 0, 255, 255 ),2,8);
-            }
-        }
-//        if(i > 1)
-//        line(drawFrame,bestMatchPositionsByFrame[i-1],bestMatchPositionsByFrame[i],Scalar( 255, 255, 255 ),2,8);
 
-        //printf("best Match Position: %d , %d\n",matchLoc.x,matchLoc.y);
+        DrawPoint(drawFrame,oldMatchLoc,Scalar(0,255,255));
 
-        drawRectangle(searchFrame,drawFrame,Scalar(0,255,0));
-        drawRectangle(regionOfInterest,drawFrame,Scalar(255,0,0));
+        drawRectangle(regionOfInterest,drawFrame,regionOfInterestColor);
+        Mat RegionOfInterestMatrix(frame,regionOfInterest);
 
-        imshow(drawFrameWindowName, drawFrame);
-        imshow(ROIWindowName, RegionOfInterestMatrix);
-        imshow(matchingWindowName, result );
+        searchFrame = crateSearchFrameFromRegionOfInterest(regionOfInterest,videoDimensions);
+        drawRectangle(searchFrame,drawFrame,searchFrameColor);
+        Mat SearchFrameMatrix(frame,searchFrame);
 
+        Point matchLoc = match(RegionOfInterestMatrix, SearchFrameMatrix);
+        // the returned matchLocation is in the wrong Coordinate System, we need to transform it back
+        matchLoc.x += searchFrame.x;
+        matchLoc.y += searchFrame.y;
+        oldMatchLoc = matchLoc;
+
+        DrawPoint(drawFrame,matchLoc,Scalar(0,0,255));
+
+
+        //
+        createNewRegionOfInterestFromMatchLocation(matchLoc, regionOfInterest, videoDimensions);
+
+        imshow(drawFrameWindowName,drawFrame);
         if(waitKey(30) == 'c') break;
     }
 
