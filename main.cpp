@@ -202,8 +202,8 @@ int main(int, char**)
     std::string drawFrameWindowName("DrawFrame"),ROIWindowName("ROIWindow"),matchingWindowName("ResultOfMatching");
 
     namedWindow(drawFrameWindowName,CV_WINDOW_AUTOSIZE);
-//    namedWindow(ROIWindowName,CV_WINDOW_AUTOSIZE);
-//    namedWindow(matchingWindowName,CV_WINDOW_AUTOSIZE);
+    namedWindow(ROIWindowName,CV_WINDOW_AUTOSIZE);
+    namedWindow(matchingWindowName,CV_WINDOW_AUTOSIZE);
 
     // define location of sub matrices in image
     Rect regionOfInterest( videoDimensions.width/2-100, videoDimensions.height/2-50, 50, 50 );
@@ -251,6 +251,15 @@ int main(int, char**)
 
         //
         createNewRegionOfInterestFromMatchLocation(matchLoc, regionOfInterest, videoDimensions);
+
+
+        Mat searchFrameZoomed(Point(256,256));
+        resize(Mat(drawFrame,searchFrame),searchFrameZoomed,Size(256,256));
+        imshow(ROIWindowName,searchFrameZoomed);
+
+        Mat resultZoomed(Point(256,256));
+        resize(result,resultZoomed,Size(256,256));
+        imshow(matchingWindowName,resultZoomed);
 
         imshow(drawFrameWindowName,drawFrame);
         int key = waitKey(100000);
