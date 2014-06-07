@@ -41,8 +41,8 @@ Rect crateSearchFrameFromRegionOfInterest(const Rect &regionOfInterest,const Siz
 void DrawPoint( Mat &img,const Point &center,const Scalar &Color)
 {
  int thickness = -1;
- int lineType = 8;
- double radius = 5.0;
+ int lineType = 1;
+ double radius = 0.5;
 
  circle( img,
          center,
@@ -58,22 +58,22 @@ void drawRectangle(const Rect &rectangleToDraw,Mat &matrixToDrawTheRectangleIn,c
          Point(rectangleToDraw.x,rectangleToDraw.y),
          Point(rectangleToDraw.x+rectangleToDraw.width,rectangleToDraw.y),
          color,
-         2,8);
+         0,1);
     line(matrixToDrawTheRectangleIn,
          Point(rectangleToDraw.x+rectangleToDraw.width,rectangleToDraw.y),
          Point(rectangleToDraw.x+rectangleToDraw.width,rectangleToDraw.y+rectangleToDraw.height),
          color,
-         2,8);
+         0,1);
     line(matrixToDrawTheRectangleIn,
          Point(rectangleToDraw.x+rectangleToDraw.width,rectangleToDraw.y+rectangleToDraw.height),
          Point(rectangleToDraw.x,rectangleToDraw.y+rectangleToDraw.height),
          color,
-         2,8);
+         0,1);
     line(matrixToDrawTheRectangleIn,
          Point(rectangleToDraw.x,rectangleToDraw.y+rectangleToDraw.height),
          Point(rectangleToDraw.x,rectangleToDraw.y),
          color,
-         2,8);
+         0,1);
 }
 
 Point match(const Mat &RegionOfInterestMatrix,const Mat &SearchFrameMatrix)
