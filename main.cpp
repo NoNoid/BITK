@@ -95,6 +95,52 @@ Point match(const Mat &RegionOfInterestMatrix,const Mat &SearchFrameMatrix)
     return minLoc;
 }
 
+Point match_2(const Mat &InnerFrame,const Mat &OuterFrame)
+{
+    int outerX = OuterFrame.cols;
+    int outerY = OuterFrame.rows;
+
+    int innerX = InnerFrame.cols;
+    int innerY = InnerFrame.rows;
+
+
+    int resultCols =  OuterFrame.cols - InnerFrame.cols + 1;
+    int resultRows = OuterFrame.rows - InnerFrame.rows + 1;
+    float result[resultCols * resultRows];
+
+    float minDifference = FLT_MAX;
+    Point posMinDifferenceInOuterFrame;
+
+    for(int leftUpperY = 0; leftUpperY < outerY - innerY; leftUpperY++)
+    {
+        for(int leftUpperX = 0; leftUpperX < outerX - innerX; leftUpperX++)
+        {
+
+            float difference = 0;
+            for(int offsetX = 0; offsetX <= innerX; offsetX++)
+            {
+                for(int offsetY = 0; offsetY <= innerY; offsetY++)
+                {
+                    Point posInOuterFrame = Point(leftUpperX + offsetX, leftUpperY + offsetY);
+                    Point posInInnerFrame = Point(offsetX, offsetY);
+                    difference += OuterFrame.at<int>(posInOuterFrame) - InnerFrame.at<int>(posInInnerFrame);
+                }
+            }
+            if(difference < minDifference)
+            {
+                minDifference = difference;
+                // get the mid-Point of the innerFrame in outerFrame-Coordinates
+                posMinDifferenceInOuterFrame = Point(leftUpperX + innerX/2, leftUpperY + innerY/2);
+            }
+            result[leftUpperX + leftUpperY * resultCols];
+
+        }
+    }
+
+    //minDifference, result hold additional information
+    return posMinDifferenceInOuterFrame;
+}
+
 void createNewRegionOfInterestFromMatchLocation(const Point &matchLoc,Rect &regionOfInterest,const Size &videoDimensions)
 {
     regionOfInterest = Rect(
