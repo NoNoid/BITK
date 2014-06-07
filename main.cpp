@@ -228,6 +228,7 @@ int main(int, char**)
         // create Matrix we can draw into without overwriting data of the original image
         Mat drawFrame;
         frame.copyTo(drawFrame);
+        GaussianBlur(frame,frame,Size(3,3),0,0);
 
         DrawPoint(drawFrame,oldMatchLoc,Scalar(0,255,255));
 
