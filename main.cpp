@@ -198,6 +198,8 @@ int main(int, char**)
 //    Mat edges;
     double oldMinVal, oldMaxVal;
     Point oldMinLoc, oldMaxLoc, oldMatchLoc;
+    bool stopTheProgramm = false;
+
 
     for(unsigned int i = 0; i < numberOfVideoFrames; ++i)
     {
@@ -231,7 +233,17 @@ int main(int, char**)
         createNewRegionOfInterestFromMatchLocation(matchLoc, regionOfInterest, videoDimensions);
 
         imshow(drawFrameWindowName,drawFrame);
-        if(waitKey(30) == 'c') break;
+        int key = waitKey(100000);
+        switch(key)
+        {
+            case ' ':
+                continue;
+                break;
+            case 'c':
+                stopTheProgramm = true;
+                break;
+        }
+        if(stopTheProgramm) break;
     }
 
     delete[] bestMatchPositionsByFrame;
