@@ -13,5 +13,7 @@ add_executable(BITK main.cpp)
 
 target_link_libraries(BITK ${OpenCV_LIBRARIES})
 
-FILE(GLOB VIDEOS videos/*.avi)
+file(GLOB MP4 videos/*.mp4)
+file(GLOB AVI videos/*.avi)
+set(VIDEOS ${AVI} ${MP4})
 file(COPY ${VIDEOS} DESTINATION ./videos/)

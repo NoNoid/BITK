@@ -166,7 +166,7 @@ int main(int, char**)
 
     cCurrentPath[sizeof(cCurrentPath) - 1] = '\0'; /* not really required */
 
-    std::string videoFileName = "videos/Megamind.avi";
+    std::string videoFileName = "videos/trafficInChina.mp4";
     VideoCapture videoHandle(videoFileName); // open the default camera
     if(!videoHandle.isOpened())  // check if we succeeded
     {
