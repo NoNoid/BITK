@@ -76,23 +76,41 @@ void drawRectangle(const Rect &rectangleToDraw,Mat &matrixToDrawTheRectangleIn,c
          0,1);
 }
 
-Point match(const Mat &RegionOfInterestMatrix,const Mat &SearchFrameMatrix)
+Point match(const Mat &SearchFrameMatrix,const Mat &RegionOfInterestMatrix, Mat &result)
 {
+    int match_method = CV_TM_CCOEFF;
+
     int resultCols =  SearchFrameMatrix.cols - RegionOfInterestMatrix.cols + 1;
     int resultRows = SearchFrameMatrix.rows - RegionOfInterestMatrix.rows + 1;
 
-    Mat result(resultCols,resultRows,CV_32FC1);
+    result = Mat(resultCols,resultRows,CV_32FC1);
 
     /// Do the Matching and Normalize
-    matchTemplate( SearchFrameMatrix, RegionOfInterestMatrix, result, CV_TM_CCOEFF_NORMED );
+    matchTemplate( SearchFrameMatrix, RegionOfInterestMatrix, result, match_method );
     normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat());
 
     double minVal, maxVal;
     Point minLoc, maxLoc, matchLoc;
 
-    minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, Mat());
+    minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc);
 
-    return minLoc;
+    /// For SQDIFF and SQDIFF_NORMED, the best matches are lower values. For all the other methods, the higher the better
+    if(  match_method == CV_TM_SQDIFF || match_method == CV_TM_SQDIFF_NORMED )
+    {
+        matchLoc = minLoc;
+        rectangle( result, Point( matchLoc.x - result.cols/10 , matchLoc.y - result.rows/10 ), Point( matchLoc.x + result.cols/10 , matchLoc.y + result.rows/10 ), Scalar::all(255), 1, 1, 0 );
+    }
+    else
+    {
+        matchLoc = maxLoc;
+        rectangle( result, Point( matchLoc.x - result.cols/10 , matchLoc.y - result.rows/10 ), Point( matchLoc.x + result.cols/10 , matchLoc.y + result.rows/10 ), Scalar::all(0), 1, 1, 0 );
+    }
+    //printf("matchLoc: = (%d,%d)",matchLoc.x,matchLoc.y);
+
+    //printf("matchLoc: = (%f,%f)",double(SearchFrameMatrix.cols - result.cols)/2.0,double(SearchFrameMatrix.rows-result.rows)/2.0);
+    Point diff((SearchFrameMatrix.cols - result.cols)/2 + 1 ,(SearchFrameMatrix.rows-result.rows)/2 + 1);
+    Point retVal(matchLoc + diff);
+    return retVal;
 }
 
 Point match_2(const Mat &InnerFrame,const Mat &OuterFrame)
@@ -220,7 +238,9 @@ int main(int, char**)
         drawRectangle(searchFrame,drawFrame,searchFrameColor);
         Mat SearchFrameMatrix(frame,searchFrame);
 
-        Point matchLoc = match(RegionOfInterestMatrix, SearchFrameMatrix);
+        Mat result;
+        Point matchLoc = match(SearchFrameMatrix,RegionOfInterestMatrix, result);
+
         // the returned matchLocation is in the wrong Coordinate System, we need to transform it back
         matchLoc.x += searchFrame.x;
         matchLoc.y += searchFrame.y;
