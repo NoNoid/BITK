@@ -113,8 +113,9 @@ Point match(const Mat &SearchFrameMatrix,const Mat &RegionOfInterestMatrix, Mat 
     return retVal;
 }
 
-Point match_2(const Mat &InnerFrame,const Mat &OuterFrame)
+Point match_2(const Mat &OuterFrame,const Mat &InnerFrame, Mat &outResult)
 {
+
     int outerX = OuterFrame.cols;
     int outerY = OuterFrame.rows;
 
@@ -150,12 +151,13 @@ Point match_2(const Mat &InnerFrame,const Mat &OuterFrame)
                 // get the mid-Point of the innerFrame in outerFrame-Coordinates
                 posMinDifferenceInOuterFrame = Point(leftUpperX + innerX/2, leftUpperY + innerY/2);
             }
-            result[leftUpperX + leftUpperY * resultCols];
+            result[leftUpperX + leftUpperY * resultCols] = difference;
 
         }
     }
 
     //minDifference, result hold additional information
+    outResult = Mat(resultCols, resultRows, CV_32FC1, result);
     return posMinDifferenceInOuterFrame;
 }
 
@@ -167,6 +169,16 @@ void createNewRegionOfInterestFromMatchLocation(const Point &matchLoc,Rect &regi
                 regionOfInterest.width,
                 regionOfInterest.height);
     clampRectangleToVideoDemensions(regionOfInterest,videoDimensions);
+}
+
+void mouseCallBack(int event, int x, int y, int flags, void* userdata)
+{
+    if  ( event == EVENT_LBUTTONDOWN )
+    {
+
+    cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
+    }
+
 }
 
 int main(int, char**)
@@ -206,12 +218,15 @@ int main(int, char**)
     namedWindow(matchingWindowName,CV_WINDOW_AUTOSIZE);
 
     // define location of sub matrices in image
-    Rect regionOfInterest( videoDimensions.width/2-100, videoDimensions.height/2-50, 50, 50 );
+    Rect regionOfInterest( videoDimensions.width/2-100, videoDimensions.height/2-50, 16, 16 );
     Scalar regionOfInterestColor(255,0,0);
     Rect searchFrame;
     Scalar searchFrameColor(0,255,0);
 
     cv::Point *bestMatchPositionsByFrame = new cv::Point[numberOfVideoFrames];
+
+    // Mouse Callback
+    setMouseCallback("My Window", mouseCallBack, (void*)&regionOfInterest);
 
 //    Mat edges;
     double oldMinVal, oldMaxVal;
@@ -240,7 +255,7 @@ int main(int, char**)
         Mat SearchFrameMatrix(frame,searchFrame);
 
         Mat result;
-        Point matchLoc = match(SearchFrameMatrix,RegionOfInterestMatrix, result);
+        Point matchLoc = match_2(SearchFrameMatrix,RegionOfInterestMatrix, result);
 
         // the returned matchLocation is in the wrong Coordinate System, we need to transform it back
         matchLoc.x += searchFrame.x;
