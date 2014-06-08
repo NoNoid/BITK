@@ -79,7 +79,7 @@ void drawRectangle(const Rect &rectangleToDraw,Mat &matrixToDrawTheRectangleIn,c
 
 Point match(const Mat &outerFrameMatrix,const Mat &innerFrameMatrix, Mat &result)
 {
-    int match_method = CV_TM_CCOEFF;
+    int match_method = CV_TM_CCOEFF_NORMED;
 
     int resultCols =  outerFrameMatrix.cols - innerFrameMatrix.cols + 1;
     int resultRows = outerFrameMatrix.rows - innerFrameMatrix.rows + 1;
@@ -415,11 +415,13 @@ int main(int, char**)
     double oldMinVal, oldMaxVal;
     Point oldMinLoc, oldMaxLoc, oldMatchLocation;
     bool stopTheProgramm = false;
+    Mat frame;
+    videoHandle >> frame;
+    cv::cvtColor(frame,frame,CV_BGR2GRAY);
+    Mat innerFrameMatrix(frame,innerFrame);
 
-
-    for(unsigned int i = 0; useWebcam ? true :i < numberOfVideoFrames; ++i)
+    for(unsigned int i = 1; useWebcam ? true :i < numberOfVideoFrames; ++i)
     {
-        Mat frame;
         // get a new frame from camera
         videoHandle >> frame;
 
@@ -432,7 +434,7 @@ int main(int, char**)
         DrawPoint(drawFrame,oldMatchLocation,Scalar(0,255,255));
 
         drawRectangle(innerFrame,drawFrame,outerFrame);
-        Mat innerFrameMatrix(frame,innerFrame);
+
 
         searchFrame = crateOuterFrameFromInnerFrame(innerFrame,videoDimensions);
         drawRectangle(searchFrame,drawFrame,searchFrameColor);
@@ -451,6 +453,7 @@ int main(int, char**)
 
         //
         createNewInnerFrameFromMatchLocation(matchLocation, innerFrame, videoDimensions);
+        innerFrameMatrix = Mat(frame,innerFrame);
 
 
         Mat outerFrameZoomed(Point(256,256));
