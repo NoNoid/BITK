@@ -1,6 +1,7 @@
 #include "opencv2/opencv.hpp"
 
 #include <stdio.h>  /* defines FILENAME_MAX */
+
 #ifdef WINDOWS
     #include <direct.h>
     #define GetCurrentDir _getcwd
@@ -176,7 +177,7 @@ void mouseCallBack(int event, int x, int y, int flags, void* userdata)
     if  ( event == EVENT_LBUTTONDOWN )
     {
 
-    cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
+    std::cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << std::endl;
     }
 
 }
@@ -202,35 +203,37 @@ int main(int, char**)
     {
         printf ("Could not find File: %s/%s\n", cCurrentPath,videoFileName.c_str());
         return -1;
+    }else{
+        printf ("Successfully loaded File: %s/%s\n", cCurrentPath,videoFileName.c_str());
     }
 
     Size videoDimensions = Size((int) videoHandle.get(CV_CAP_PROP_FRAME_WIDTH),
                                 (int) videoHandle.get(CV_CAP_PROP_FRAME_HEIGHT));
-    printf("VideoWidth: %d,VideoHeight: %d\n",videoDimensions.width,videoDimensions.height);
+    printf("VideoWidth: %d, VideoHeight: %d\n",videoDimensions.width,videoDimensions.height);
 
     unsigned int numberOfVideoFrames = videoHandle.get(CV_CAP_PROP_FRAME_COUNT);
     printf("number of Frames: %d\n",numberOfVideoFrames);
 
-    std::string drawFrameWindowName("DrawFrame"),ROIWindowName("ROIWindow"),matchingWindowName("ResultOfMatching");
+    std::string drawFrameWindowName("drawFrame"),outerFrameWindowName("outerFrame"),matchingWindowName("resultOfMatching");
 
     namedWindow(drawFrameWindowName,CV_WINDOW_AUTOSIZE);
-    namedWindow(ROIWindowName,CV_WINDOW_AUTOSIZE);
+    namedWindow(outerFrameWindowName,CV_WINDOW_AUTOSIZE);
     namedWindow(matchingWindowName,CV_WINDOW_AUTOSIZE);
 
     // define location of sub matrices in image
-    Rect regionOfInterest( videoDimensions.width/2-100, videoDimensions.height/2-50, 16, 16 );
-    Scalar regionOfInterestColor(255,0,0);
+    Rect innerFrame( videoDimensions.width/2-100, videoDimensions.height/2-50, 16, 16 );
+    Scalar outerFrame(255,0,0);
     Rect searchFrame;
     Scalar searchFrameColor(0,255,0);
 
     cv::Point *bestMatchPositionsByFrame = new cv::Point[numberOfVideoFrames];
 
     // Mouse Callback
-    setMouseCallback("My Window", mouseCallBack, (void*)&regionOfInterest);
+    setMouseCallback("My Window", mouseCallBack, (void*)&outerFrame);
 
 //    Mat edges;
     double oldMinVal, oldMaxVal;
-    Point oldMinLoc, oldMaxLoc, oldMatchLoc;
+    Point oldMinLoc, oldMaxLoc, oldMatchLocation;
     bool stopTheProgramm = false;
 
 
@@ -245,33 +248,33 @@ int main(int, char**)
         frame.copyTo(drawFrame);
         GaussianBlur(frame,frame,Size(3,3),0,0);
 
-        DrawPoint(drawFrame,oldMatchLoc,Scalar(0,255,255));
+        DrawPoint(drawFrame,oldMatchLocation,Scalar(0,255,255));
 
-        drawRectangle(regionOfInterest,drawFrame,regionOfInterestColor);
-        Mat RegionOfInterestMatrix(frame,regionOfInterest);
+        drawRectangle(innerFrame,drawFrame,outerFrame);
+        Mat RegionOfInterestMatrix(frame,innerFrame);
 
-        searchFrame = crateSearchFrameFromRegionOfInterest(regionOfInterest,videoDimensions);
+        searchFrame = crateSearchFrameFromRegionOfInterest(innerFrame,videoDimensions);
         drawRectangle(searchFrame,drawFrame,searchFrameColor);
         Mat SearchFrameMatrix(frame,searchFrame);
 
         Mat result;
-        Point matchLoc = match_2(SearchFrameMatrix,RegionOfInterestMatrix, result);
+        Point matchLocation = match(SearchFrameMatrix,RegionOfInterestMatrix, result);
 
         // the returned matchLocation is in the wrong Coordinate System, we need to transform it back
-        matchLoc.x += searchFrame.x;
-        matchLoc.y += searchFrame.y;
-        oldMatchLoc = matchLoc;
+        matchLocation.x += searchFrame.x;
+        matchLocation.y += searchFrame.y;
+        oldMatchLocation = matchLocation;
 
-        DrawPoint(drawFrame,matchLoc,Scalar(0,0,255));
+        DrawPoint(drawFrame,matchLocation,Scalar(0,0,255));
 
 
         //
-        createNewRegionOfInterestFromMatchLocation(matchLoc, regionOfInterest, videoDimensions);
+        createNewRegionOfInterestFromMatchLocation(matchLocation, innerFrame, videoDimensions);
 
 
         Mat searchFrameZoomed(Point(256,256));
         resize(Mat(drawFrame,searchFrame),searchFrameZoomed,Size(256,256));
-        imshow(ROIWindowName,searchFrameZoomed);
+        imshow(outerFrameWindowName,searchFrameZoomed);
 
         Mat resultZoomed(Point(256,256));
         resize(result,resultZoomed,Size(256,256));
@@ -281,12 +284,12 @@ int main(int, char**)
         int key = waitKey(100000);
         switch(key)
         {
-            case ' ':
-                continue;
-                break;
-            case 'c':
-                stopTheProgramm = true;
-                break;
+        case ' ':
+            continue;
+            break;
+        case 'c':
+            stopTheProgramm = true;
+            break;
         }
         if(stopTheProgramm) break;
     }
