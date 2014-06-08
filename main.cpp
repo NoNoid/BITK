@@ -116,7 +116,6 @@ Point match(const Mat &outerFrameMatrix,const Mat &innerFrameMatrix, Mat &result
 
 Point matchSAD(const Mat &OuterFrameMatrix,const Mat &InnerFrameMatrix, Mat &outResult)
 {
-
     int outerX = OuterFrameMatrix.cols;
     int outerY = OuterFrameMatrix.rows;
 
@@ -145,7 +144,7 @@ Point matchSAD(const Mat &OuterFrameMatrix,const Mat &InnerFrameMatrix, Mat &out
                 {
                     Point posInOuterFrame = Point(leftUpperX + offsetX, leftUpperY + offsetY);
                     Point posInInnerFrame = Point(offsetX, offsetY);
-                    difference += OuterFrameMatrix.at<int>(posInOuterFrame) - InnerFrameMatrix.at<int>(posInInnerFrame);
+                    difference += OuterFrameMatrix.at<uchar>(posInOuterFrame) - InnerFrameMatrix.at<uchar>(posInInnerFrame);
                 }
             }
             if(difference < minDifference)
@@ -284,6 +283,7 @@ int main(int, char**)
         // create Matrix we can draw into without overwriting data of the original image
         Mat drawFrame;
         frame.copyTo(drawFrame);
+        cv::cvtColor(frame,frame,CV_BGR2GRAY);
         GaussianBlur(frame,frame,Size(3,3),0,0);
 
         DrawPoint(drawFrame,oldMatchLocation,Scalar(0,255,255));
