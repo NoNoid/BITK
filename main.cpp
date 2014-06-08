@@ -27,7 +27,7 @@ void clampRectangleToVideoDemensions(Rect &searchFrame,const Size &videoDimensio
         searchFrame.y = videoDimensions.height-searchFrame.height;
 }
 
-Rect crateSearchFrameFromRegionOfInterest(const Rect &regionOfInterest,const Size &videoDimensions, int factor = 2)
+Rect crateOuterFrameFromInnerFrame(const Rect &regionOfInterest,const Size &videoDimensions, int factor = 2)
 {
     Rect searchFrame(
                 regionOfInterest.x-((factor*regionOfInterest.width)/2-regionOfInterest.width/2),
@@ -77,17 +77,17 @@ void drawRectangle(const Rect &rectangleToDraw,Mat &matrixToDrawTheRectangleIn,c
          0,1);
 }
 
-Point match(const Mat &SearchFrameMatrix,const Mat &RegionOfInterestMatrix, Mat &result)
+Point match(const Mat &outerFrameMatrix,const Mat &innerFrameMatrix, Mat &result)
 {
     int match_method = CV_TM_CCOEFF;
 
-    int resultCols =  SearchFrameMatrix.cols - RegionOfInterestMatrix.cols + 1;
-    int resultRows = SearchFrameMatrix.rows - RegionOfInterestMatrix.rows + 1;
+    int resultCols =  outerFrameMatrix.cols - innerFrameMatrix.cols + 1;
+    int resultRows = outerFrameMatrix.rows - innerFrameMatrix.rows + 1;
 
     result = Mat(resultCols,resultRows,CV_32FC1);
 
     /// Do the Matching and Normalize
-    matchTemplate( SearchFrameMatrix, RegionOfInterestMatrix, result, match_method );
+    matchTemplate( outerFrameMatrix, innerFrameMatrix, result, match_method );
     normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat());
 
     double minVal, maxVal;
@@ -109,23 +109,23 @@ Point match(const Mat &SearchFrameMatrix,const Mat &RegionOfInterestMatrix, Mat 
     //printf("matchLoc: = (%d,%d)",matchLoc.x,matchLoc.y);
 
     //printf("matchLoc: = (%f,%f)",double(SearchFrameMatrix.cols - result.cols)/2.0,double(SearchFrameMatrix.rows-result.rows)/2.0);
-    Point diff((SearchFrameMatrix.cols - result.cols)/2 + 1 ,(SearchFrameMatrix.rows-result.rows)/2 + 1);
+    Point diff((outerFrameMatrix.cols - result.cols)/2 + 1 ,(outerFrameMatrix.rows-result.rows)/2 + 1);
     Point retVal(matchLoc + diff);
     return retVal;
 }
 
-Point match_2(const Mat &OuterFrame,const Mat &InnerFrame, Mat &outResult)
+Point match_2(const Mat &OuterFrameMatrix,const Mat &InnerFrameMatrix, Mat &outResult)
 {
 
-    int outerX = OuterFrame.cols;
-    int outerY = OuterFrame.rows;
+    int outerX = OuterFrameMatrix.cols;
+    int outerY = OuterFrameMatrix.rows;
 
-    int innerX = InnerFrame.cols;
-    int innerY = InnerFrame.rows;
+    int innerX = InnerFrameMatrix.cols;
+    int innerY = InnerFrameMatrix.rows;
 
 
-    int resultCols =  OuterFrame.cols - InnerFrame.cols + 1;
-    int resultRows = OuterFrame.rows - InnerFrame.rows + 1;
+    int resultCols =  OuterFrameMatrix.cols - InnerFrameMatrix.cols + 1;
+    int resultRows = OuterFrameMatrix.rows - InnerFrameMatrix.rows + 1;
     float result[resultCols * resultRows];
 
     float minDifference = FLT_MAX;
@@ -143,7 +143,7 @@ Point match_2(const Mat &OuterFrame,const Mat &InnerFrame, Mat &outResult)
                 {
                     Point posInOuterFrame = Point(leftUpperX + offsetX, leftUpperY + offsetY);
                     Point posInInnerFrame = Point(offsetX, offsetY);
-                    difference += OuterFrame.at<int>(posInOuterFrame) - InnerFrame.at<int>(posInInnerFrame);
+                    difference += OuterFrameMatrix.at<int>(posInOuterFrame) - InnerFrameMatrix.at<int>(posInInnerFrame);
                 }
             }
             if(difference < minDifference)
@@ -159,10 +159,11 @@ Point match_2(const Mat &OuterFrame,const Mat &InnerFrame, Mat &outResult)
 
     //minDifference, result hold additional information
     outResult = Mat(resultCols, resultRows, CV_32FC1, result);
+    normalize( outResult, outResult, 0, 1, NORM_MINMAX, -1, Mat());
     return posMinDifferenceInOuterFrame;
 }
 
-void createNewRegionOfInterestFromMatchLocation(const Point &matchLoc,Rect &regionOfInterest,const Size &videoDimensions)
+void createNewInnerFrameFromMatchLocation(const Point &matchLoc,Rect &regionOfInterest,const Size &videoDimensions)
 {
     regionOfInterest = Rect(
                 matchLoc.x-regionOfInterest.width/2,
@@ -295,14 +296,14 @@ int main(int, char**)
         DrawPoint(drawFrame,oldMatchLocation,Scalar(0,255,255));
 
         drawRectangle(innerFrame,drawFrame,outerFrame);
-        Mat RegionOfInterestMatrix(frame,innerFrame);
+        Mat innerFrameMatrix(frame,innerFrame);
 
-        searchFrame = crateSearchFrameFromRegionOfInterest(innerFrame,videoDimensions);
+        searchFrame = crateOuterFrameFromInnerFrame(innerFrame,videoDimensions);
         drawRectangle(searchFrame,drawFrame,searchFrameColor);
-        Mat SearchFrameMatrix(frame,searchFrame);
+        Mat outerFrameMatrix(frame,searchFrame);
 
         Mat result;
-        Point matchLocation = match_2(SearchFrameMatrix,RegionOfInterestMatrix, result);
+        Point matchLocation = match_2(outerFrameMatrix,innerFrameMatrix, result);
 
         // the returned matchLocation is in the wrong Coordinate System, we need to transform it back
         matchLocation.x += searchFrame.x;
@@ -313,12 +314,12 @@ int main(int, char**)
 
 
         //
-        createNewRegionOfInterestFromMatchLocation(matchLocation, innerFrame, videoDimensions);
+        createNewInnerFrameFromMatchLocation(matchLocation, innerFrame, videoDimensions);
 
 
-        Mat searchFrameZoomed(Point(256,256));
-        resize(Mat(drawFrame,searchFrame),searchFrameZoomed,Size(256,256));
-        imshow(outerFrameWindowName,searchFrameZoomed);
+        Mat outerFrameZoomed(Point(256,256));
+        resize(Mat(drawFrame,searchFrame),outerFrameZoomed,Size(256,256));
+        imshow(outerFrameWindowName,outerFrameZoomed);
 
         Mat resultZoomed(Point(256,256));
         resize(result,resultZoomed,Size(256,256));
