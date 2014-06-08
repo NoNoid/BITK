@@ -183,8 +183,50 @@ void mouseCallBack(int event, int x, int y, int flags, void* userdata)
 
 }
 
+void webcam()
+{
+    /*
+    cv::VideoCapture cap(0);
+
+    cv::Mat frame;
+    cv::Mat eye_tpl;  // The eye template
+    cv::Rect eye_bb;  // The eye bounding box
+
+    while(cv::waitKey(15) != 'q')
+    {
+        cap >> frame;
+        cv::Mat gray;
+        cv::cvtColor(frame, gray, CV_BGR2GRAY);
+
+        cv::imshow("video", frame);
+    }*/
+
+    VideoCapture Camcap(0); // open the default camera id == 0
+    // Exit if fail to open a Webcam
+    if( !Camcap.isOpened() ) {
+        fprintf(stderr, " Fail to open a Camera\n" );
+        exit(1);
+    }
+
+    // For storage the image from webcam
+    Mat CamImage;
+    // Create a window : "Camera Window" , 0 :allow user adjust the size
+    namedWindow("Camera Window", 0 );
+
+    while(cv::waitKey(15) != 'c') {
+            // Retrieve the image from camera ID:0 then store in CamImage
+            Camcap.retrieve( CamImage , 0 );
+            // Displays the image in the specified window name
+            imshow("Camera Window", CamImage );
+    }
+
+}
+
 int main(int, char**)
 {
+
+    webcam();
+
     //diable printf() buffering
     setbuf(stdout, NULL);
     printf("press 'c' to close\n");
@@ -198,8 +240,9 @@ int main(int, char**)
 
     cCurrentPath[sizeof(cCurrentPath) - 1] = '\0'; /* not really required */
 
-    std::string videoFileName = "videos/trafficInChina.mp4";
-    VideoCapture videoHandle(videoFileName); // open the default camera
+    std::string videoFileName = "videos/video_mitBahn.mp4";
+    VideoCapture videoHandle(0); // open the default camera
+
     if(!videoHandle.isOpened())  // check if we succeeded
     {
         printf ("Could not find File: %s/%s\n", cCurrentPath,videoFileName.c_str());
