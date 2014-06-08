@@ -164,6 +164,83 @@ Point matchSAD(const Mat &OuterFrameMatrix,const Mat &InnerFrameMatrix, Mat &out
     return posMinDifferenceInOuterFrame;
 }
 
+void determineValues(const Mat &Matrix, float &minValue, float &maxValue, float &meanValue)
+{
+    meanValue = 0;
+    minValue = FLT_MAX;
+    maxValue = FLT_MIN;
+    for(int y = 0; y < Matrix.rows; y++)
+    {
+        for(int x = 0; x < Matrix.cols; x++)
+        {
+            Point pos = Point(x, y);
+            int value = Matrix.at<uchar>(pos);
+            meanValue += value;
+            if( value < minValue )
+                minValue = value;
+            if( value > maxValue)
+                maxValue = value;
+        }
+    }
+    meanValue /= Matrix.rows * Matrix.cols;
+}
+
+Point matchKKFMF(const Mat &OuterFrameMatrix,const Mat &InnerFrameMatrix, Mat &outResult)
+{
+
+    float meanValue;
+    float minValue;
+    float maxValue;
+    determineValues(OuterFrameMatrix, minValue, maxValue, meanValue);
+
+    int outerX = OuterFrameMatrix.cols;
+    int outerY = OuterFrameMatrix.rows;
+
+    int innerX = InnerFrameMatrix.cols;
+    int innerY = InnerFrameMatrix.rows;
+
+
+    int resultCols =  OuterFrameMatrix.cols - InnerFrameMatrix.cols + 1;
+    int resultRows = OuterFrameMatrix.rows - InnerFrameMatrix.rows + 1;
+    float result[resultCols * resultRows];
+
+    float minDifference = FLT_MAX;
+    Point posMinDifferenceInOuterFrame;
+
+    outResult = Mat(resultCols, resultRows, CV_32FC1);
+
+    for(int leftUpperY = 0; leftUpperY < outerY - innerY; leftUpperY++)
+    {
+        for(int leftUpperX = 0; leftUpperX < outerX - innerX; leftUpperX++)
+        {
+
+            float difference = 0;
+            for(int offsetX = 0; offsetX <= innerX; offsetX++)
+            {
+                for(int offsetY = 0; offsetY <= innerY; offsetY++)
+                {
+                    Point posInOuterFrame = Point(leftUpperX + offsetX, leftUpperY + offsetY);
+                    Point posInInnerFrame = Point(offsetX, offsetY);
+                    difference += OuterFrameMatrix.at<uchar>(posInOuterFrame) - InnerFrameMatrix.at<uchar>(posInInnerFrame);
+                }
+            }
+            if(difference < minDifference)
+            {
+                minDifference = difference;
+                // get the mid-Point of the innerFrame in outerFrame-Coordinates
+                posMinDifferenceInOuterFrame = Point(leftUpperX + innerX/2, leftUpperY + innerY/2);
+            }
+            result[leftUpperX + leftUpperY * resultCols] = difference;
+            //outResult.at<float>(leftUpperX,leftUpperY) = difference;
+        }
+    }
+
+    //minDifference, result hold additional information
+    outResult = Mat(resultCols, resultRows, CV_32FC1, result);
+    normalize( outResult, outResult, 0, 1, NORM_MINMAX, -1, Mat());
+    return posMinDifferenceInOuterFrame;
+}
+
 void createNewInnerFrameFromMatchLocation(const Point &matchLoc,Rect &regionOfInterest,const Size &videoDimensions)
 {
     regionOfInterest = Rect(
@@ -248,11 +325,11 @@ int main(int, char**)
 
     namedWindow(drawFrameWindowName,CV_WINDOW_AUTOSIZE);
     namedWindow(outerFrameWindowName,CV_WINDOW_AUTOSIZE);
-    moveWindow(outerFrameWindowName, videoDimensions.width+55, 50);
+    cvMoveWindow(outerFrameWindowName.c_str(), videoDimensions.width+55, 50);
     if(showResultOfMatching)
     {
         namedWindow(matchingWindowName,CV_WINDOW_AUTOSIZE);
-        moveWindow(matchingWindowName, videoDimensions.width+55, 100 + 256);
+        cvMoveWindow(matchingWindowName.c_str(), videoDimensions.width+55, 100 + 256);
     }
 
     // define location of sub matrices in image
