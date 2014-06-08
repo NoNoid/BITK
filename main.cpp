@@ -27,13 +27,13 @@ void clampRectangleToVideoDemensions(Rect &searchFrame,const Size &videoDimensio
         searchFrame.y = videoDimensions.height-searchFrame.height;
 }
 
-Rect crateSearchFrameFromRegionOfInterest(const Rect &regionOfInterest,const Size &videoDimensions)
+Rect crateSearchFrameFromRegionOfInterest(const Rect &regionOfInterest,const Size &videoDimensions, int factor = 2)
 {
     Rect searchFrame(
-                regionOfInterest.x-(regionOfInterest.width/2),
-                regionOfInterest.y-(regionOfInterest.height/2),
-                2*regionOfInterest.width,
-                2*regionOfInterest.height);
+                regionOfInterest.x-((factor*regionOfInterest.width)/2-regionOfInterest.width/2),
+                regionOfInterest.y-((factor*regionOfInterest.height)/2-regionOfInterest.height/2),
+                factor*regionOfInterest.width,
+                factor*regionOfInterest.height);
     clampRectangleToVideoDemensions(searchFrame, videoDimensions);
 
     return searchFrame;
