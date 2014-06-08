@@ -114,7 +114,7 @@ Point match(const Mat &outerFrameMatrix,const Mat &innerFrameMatrix, Mat &result
     return retVal;
 }
 
-Point match_2(const Mat &OuterFrameMatrix,const Mat &InnerFrameMatrix, Mat &outResult)
+Point matchSAD(const Mat &OuterFrameMatrix,const Mat &InnerFrameMatrix, Mat &outResult)
 {
 
     int outerX = OuterFrameMatrix.cols;
@@ -130,6 +130,8 @@ Point match_2(const Mat &OuterFrameMatrix,const Mat &InnerFrameMatrix, Mat &outR
 
     float minDifference = FLT_MAX;
     Point posMinDifferenceInOuterFrame;
+
+    outResult = Mat(resultCols, resultRows, CV_32FC1);
 
     for(int leftUpperY = 0; leftUpperY < outerY - innerY; leftUpperY++)
     {
@@ -153,7 +155,7 @@ Point match_2(const Mat &OuterFrameMatrix,const Mat &InnerFrameMatrix, Mat &outR
                 posMinDifferenceInOuterFrame = Point(leftUpperX + innerX/2, leftUpperY + innerY/2);
             }
             result[leftUpperX + leftUpperY * resultCols] = difference;
-
+            //outResult.at<float>(leftUpperX,leftUpperY) = difference;
         }
     }
 
@@ -294,7 +296,7 @@ int main(int, char**)
         Mat outerFrameMatrix(frame,searchFrame);
 
         Mat result;
-        Point matchLocation = match_2(outerFrameMatrix,innerFrameMatrix, result);
+        Point matchLocation = matchSAD(outerFrameMatrix,innerFrameMatrix, result);
 
         // the returned matchLocation is in the wrong Coordinate System, we need to transform it back
         matchLocation.x += searchFrame.x;
