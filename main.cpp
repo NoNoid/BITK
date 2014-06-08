@@ -175,8 +175,9 @@ void mouseCallBack(int event, int x, int y, int flags, void* userdata)
 {
     if  ( event == EVENT_LBUTTONDOWN )
     {
-
-    cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
+        Rect* innerFrame = (Rect*)userdata;
+        innerFrame->x = x - innerFrame->width / 2;
+        innerFrame->y = y - innerFrame->height / 2;
     }
 
 }
@@ -226,7 +227,7 @@ int main(int, char**)
     cv::Point *bestMatchPositionsByFrame = new cv::Point[numberOfVideoFrames];
 
     // Mouse Callback
-    setMouseCallback("My Window", mouseCallBack, (void*)&regionOfInterest);
+    setMouseCallback(drawFrameWindowName, mouseCallBack, (void*)&regionOfInterest);
 
 //    Mat edges;
     double oldMinVal, oldMaxVal;
@@ -278,7 +279,7 @@ int main(int, char**)
         imshow(matchingWindowName,resultZoomed);
 
         imshow(drawFrameWindowName,drawFrame);
-        int key = waitKey(100000);
+        int key = waitKey(0);
         switch(key)
         {
             case ' ':
