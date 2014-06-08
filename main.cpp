@@ -184,80 +184,63 @@ void mouseCallBack(int event, int x, int y, int flags, void* userdata)
 
 }
 
-void webcam()
+VideoCapture webcam(const int cameraIndex = 0)
 {
-    /*
-    cv::VideoCapture cap(0);
-
-    cv::Mat frame;
-    cv::Mat eye_tpl;  // The eye template
-    cv::Rect eye_bb;  // The eye bounding box
-
-    while(cv::waitKey(15) != 'q')
-    {
-        cap >> frame;
-        cv::Mat gray;
-        cv::cvtColor(frame, gray, CV_BGR2GRAY);
-
-        cv::imshow("video", frame);
-    }*/
-
-    VideoCapture Camcap(0); // open the default camera id == 0
-    // Exit if fail to open a Webcam
-    if( !Camcap.isOpened() ) {
-        fprintf(stderr, " Fail to open a Camera\n" );
-        exit(1);
-    }
-
-    // For storage the image from webcam
-    Mat CamImage;
-    // Create a window : "Camera Window" , 0 :allow user adjust the size
-    namedWindow("Camera Window", 0 );
-
-    while(cv::waitKey(15) != 'c') {
-            // Retrieve the image from camera ID:0 then store in CamImage
-            Camcap.retrieve( CamImage , 0 );
-            // Displays the image in the specified window name
-            imshow("Camera Window", CamImage );
-    }
-
+    printf ("Successfully opened Camera with Index: %d\n",cameraIndex);
+    return VideoCapture(cameraIndex);
 }
 
-int main(int, char**)
+VideoCapture videoFile(const std::string &videoFileName)
 {
-
-    webcam();
-
-    //diable printf() buffering
-    setbuf(stdout, NULL);
-    printf("press 'c' to close\n");
-
     char cCurrentPath[FILENAME_MAX];
 
     if (!GetCurrentDir(cCurrentPath, sizeof(cCurrentPath)))
     {
-        return -1;
+        exit(-1);
     }
 
     cCurrentPath[sizeof(cCurrentPath) - 1] = '\0'; /* not really required */
 
-    std::string videoFileName = "videos/video_mitBahn.mp4";
-    VideoCapture videoHandle(0); // open the default camera
+    VideoCapture videoHandle = VideoCapture(videoFileName); // open the default camera
 
     if(!videoHandle.isOpened())  // check if we succeeded
     {
         printf ("Could not find File: %s/%s\n", cCurrentPath,videoFileName.c_str());
-        return -1;
+        exit(-1);
     }else{
         printf ("Successfully loaded File: %s/%s\n", cCurrentPath,videoFileName.c_str());
+    }
+
+    return videoHandle;
+}
+
+int main(int, char**)
+{
+    //diable printf() buffering
+    setbuf(stdout, NULL);
+    printf("press 'c' to close\n");
+
+    bool useWebcam = false;
+    VideoCapture videoHandle;
+
+    if(useWebcam)
+        {videoHandle = webcam();}
+    else
+    {
+        std::string videoFileName = "videos/video_mitBahn.mp4";
+        videoHandle = videoFile(videoFileName);
     }
 
     Size videoDimensions = Size((int) videoHandle.get(CV_CAP_PROP_FRAME_WIDTH),
                                 (int) videoHandle.get(CV_CAP_PROP_FRAME_HEIGHT));
     printf("VideoWidth: %d, VideoHeight: %d\n",videoDimensions.width,videoDimensions.height);
 
-    unsigned int numberOfVideoFrames = videoHandle.get(CV_CAP_PROP_FRAME_COUNT);
-    printf("number of Frames: %d\n",numberOfVideoFrames);
+    int numberOfVideoFrames;
+    if(!useWebcam)
+    {
+        numberOfVideoFrames = videoHandle.get(CV_CAP_PROP_FRAME_COUNT);
+        printf("number of Frames: %d\n",numberOfVideoFrames);
+    }
 
     std::string drawFrameWindowName("drawFrame"),outerFrameWindowName("outerFrame"),matchingWindowName("resultOfMatching");
 
@@ -271,7 +254,9 @@ int main(int, char**)
     Rect searchFrame;
     Scalar searchFrameColor(0,255,0);
 
-    cv::Point *bestMatchPositionsByFrame = new cv::Point[numberOfVideoFrames];
+    cv::Point *bestMatchPositionsByFrame;
+    if(!useWebcam)
+        {bestMatchPositionsByFrame = new cv::Point[numberOfVideoFrames];}
 
     // Mouse Callback
     setMouseCallback(drawFrameWindowName, mouseCallBack, (void*)&innerFrame);
@@ -282,7 +267,7 @@ int main(int, char**)
     bool stopTheProgramm = false;
 
 
-    for(unsigned int i = 0; i < numberOfVideoFrames; ++i)
+    for(unsigned int i = 0; useWebcam ? true :i < numberOfVideoFrames; ++i)
     {
         Mat frame;
         // get a new frame from camera
@@ -326,20 +311,33 @@ int main(int, char**)
         imshow(matchingWindowName,resultZoomed);
 
         imshow(drawFrameWindowName,drawFrame);
-        int key = waitKey(0);
-        switch(key)
+        if(!useWebcam)
         {
-        case ' ':
-            continue;
-            break;
-        case 'c':
-            stopTheProgramm = true;
-            break;
+            int key = waitKey(0);
+            switch(key)
+            {
+            case ' ':
+                continue;
+                break;
+            case 'c':
+                stopTheProgramm = true;
+                break;
+            }
+        }else
+        {
+            int key = waitKey(1);
+            switch(key)
+            {
+            case 'c':
+                stopTheProgramm = true;
+                break;
+            }
         }
         if(stopTheProgramm) break;
     }
 
-    delete[] bestMatchPositionsByFrame;
+    if(!useWebcam)
+        {delete[] bestMatchPositionsByFrame;}
 
     // the camera will be deinitialized automatically in VideoCapture destructor
     return 0;
