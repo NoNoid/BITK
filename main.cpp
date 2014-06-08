@@ -221,6 +221,7 @@ int main(int, char**)
     printf("press 'c' to close\n");
 
     bool useWebcam = false;
+    bool showResultOfMatching = false;
     VideoCapture videoHandle;
 
     if(useWebcam)
@@ -246,9 +247,12 @@ int main(int, char**)
 
     namedWindow(drawFrameWindowName,CV_WINDOW_AUTOSIZE);
     namedWindow(outerFrameWindowName,CV_WINDOW_AUTOSIZE);
-    namedWindow(matchingWindowName,CV_WINDOW_AUTOSIZE);
     moveWindow(outerFrameWindowName, videoDimensions.width+55, 50);
-    moveWindow(matchingWindowName, videoDimensions.width+55, 100 + 256);
+    if(showResultOfMatching)
+    {
+        namedWindow(matchingWindowName,CV_WINDOW_AUTOSIZE);
+        moveWindow(matchingWindowName, videoDimensions.width+55, 100 + 256);
+    }
 
     // define location of sub matrices in image
     Rect innerFrame( videoDimensions.width/2-100, videoDimensions.height/2-50, 16, 16 );
@@ -308,9 +312,12 @@ int main(int, char**)
         resize(Mat(drawFrame,searchFrame),outerFrameZoomed,Size(256,256));
         imshow(outerFrameWindowName,outerFrameZoomed);
 
-        Mat resultZoomed(Point(256,256));
-        resize(result,resultZoomed,Size(256,256));
-        imshow(matchingWindowName,resultZoomed);
+        if(showResultOfMatching)
+        {
+            Mat resultZoomed(Point(256,256));
+            resize(result,resultZoomed,Size(256,256));
+            imshow(matchingWindowName,resultZoomed);
+        }
 
         imshow(drawFrameWindowName,drawFrame);
         if(!useWebcam)
