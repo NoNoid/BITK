@@ -187,25 +187,27 @@ void determineValues(const Mat &Matrix, float &minValue, float &maxValue, float 
 
 Point matchKKFMF(const Mat &OuterFrameMatrix,const Mat &InnerFrameMatrix, Mat &outResult)
 {
-
-    float meanValue;
-    float minValue;
-    float maxValue;
-    determineValues(OuterFrameMatrix, minValue, maxValue, meanValue);
-
     int outerX = OuterFrameMatrix.cols;
     int outerY = OuterFrameMatrix.rows;
+    float outerMinValue;
+    float outerMaxValue;
+    float outerMeanValue;
+    determineValues(OuterFrameMatrix, outerMinValue, outerMaxValue, outerMeanValue);
 
     int innerX = InnerFrameMatrix.cols;
     int innerY = InnerFrameMatrix.rows;
+    float innerMinValue;
+    float innerMaxValue;
+    float innerMeanValue;
+    determineValues(InnerFrameMatrix, innerMinValue, innerMaxValue, innerMeanValue);
 
 
     int resultCols =  OuterFrameMatrix.cols - InnerFrameMatrix.cols + 1;
     int resultRows = OuterFrameMatrix.rows - InnerFrameMatrix.rows + 1;
     float result[resultCols * resultRows];
 
-    float minDifference = FLT_MAX;
-    Point posMinDifferenceInOuterFrame;
+    float maxSimilarity = FLT_MIN;
+    Point posMaxSimilarityInOuterFrame;
 
     outResult = Mat(resultCols, resultRows, CV_32FC1);
 
@@ -214,23 +216,25 @@ Point matchKKFMF(const Mat &OuterFrameMatrix,const Mat &InnerFrameMatrix, Mat &o
         for(int leftUpperX = 0; leftUpperX < outerX - innerX; leftUpperX++)
         {
 
-            float difference = 0;
+            float similarity = 0;
             for(int offsetX = 0; offsetX <= innerX; offsetX++)
             {
                 for(int offsetY = 0; offsetY <= innerY; offsetY++)
                 {
                     Point posInOuterFrame = Point(leftUpperX + offsetX, leftUpperY + offsetY);
                     Point posInInnerFrame = Point(offsetX, offsetY);
-                    difference += OuterFrameMatrix.at<uchar>(posInOuterFrame) - InnerFrameMatrix.at<uchar>(posInInnerFrame);
+                    float outerValue = (OuterFrameMatrix.at<uchar>(posInOuterFrame) - outerMeanValue) / outerMeanValue;
+                    float innerValue = (InnerFrameMatrix.at<uchar>(posInInnerFrame) - innerMeanValue) / outerMeanValue;
+                    similarity += outerValue * innerValue;
                 }
             }
-            if(difference < minDifference)
+            if(similarity > maxSimilarity)
             {
-                minDifference = difference;
+                maxSimilarity = similarity;
                 // get the mid-Point of the innerFrame in outerFrame-Coordinates
-                posMinDifferenceInOuterFrame = Point(leftUpperX + innerX/2, leftUpperY + innerY/2);
+                posMaxSimilarityInOuterFrame = Point(leftUpperX + innerX/2, leftUpperY + innerY/2);
             }
-            result[leftUpperX + leftUpperY * resultCols] = difference;
+            result[leftUpperX + leftUpperY * resultCols] = similarity;
             //outResult.at<float>(leftUpperX,leftUpperY) = difference;
         }
     }
@@ -238,7 +242,7 @@ Point matchKKFMF(const Mat &OuterFrameMatrix,const Mat &InnerFrameMatrix, Mat &o
     //minDifference, result hold additional information
     outResult = Mat(resultCols, resultRows, CV_32FC1, result);
     normalize( outResult, outResult, 0, 1, NORM_MINMAX, -1, Mat());
-    return posMinDifferenceInOuterFrame;
+    return posMaxSimilarityInOuterFrame;
 }
 
 void createNewInnerFrameFromMatchLocation(const Point &matchLoc,Rect &regionOfInterest,const Size &videoDimensions)
@@ -259,7 +263,10 @@ void mouseCallBack(int event, int x, int y, int flags, void* userdata)
         innerFrame->x = x - innerFrame->width / 2;
         innerFrame->y = y - innerFrame->height / 2;
     }
+    else if( event == EVENT_LBUTTONUP)
+    {
 
+    }
 }
 
 VideoCapture webcam(const int cameraIndex = 0)
@@ -306,7 +313,7 @@ int main(int, char**)
         {videoHandle = webcam();}
     else
     {
-        std::string videoFileName = "videos/video_mitBahn.mp4";
+        std::string videoFileName = "videos/trafficInChina.mp4";
         videoHandle = videoFile(videoFileName);
     }
 
@@ -373,7 +380,7 @@ int main(int, char**)
         Mat outerFrameMatrix(frame,searchFrame);
 
         Mat result;
-        Point matchLocation = matchSAD(outerFrameMatrix,innerFrameMatrix, result);
+        Point matchLocation = matchKKFMF(outerFrameMatrix,innerFrameMatrix, result);
 
         // the returned matchLocation is in the wrong Coordinate System, we need to transform it back
         matchLocation.x += searchFrame.x;
