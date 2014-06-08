@@ -114,6 +114,65 @@ Point match(const Mat &outerFrameMatrix,const Mat &innerFrameMatrix, Mat &result
     return retVal;
 }
 
+float Mor(const Mat& sm, const Mat& rm, int x,int y, float rMean_new, float sMean_old, int umax_width, int vmax_height)
+{
+
+    float sum_r_uv = 0;
+    float sum_s_uv = 0;
+    float sum_r_uv_sq = 0;
+    float sum_s_uv_sq = 0;
+
+    for(int u = -umax_width/2; u < umax_width/2; u++)
+    {
+        for(int v = -vmax_height/2; v < vmax_height/2; v++)
+        {
+            float r_val = float(rm.at<uchar>(u,v)) - rMean_new;
+            float s_val = float(sm.at<uchar>(x+u,y+v)) - sMean_old;
+            sum_r_uv += r_val;
+            sum_s_uv += s_val;
+            sum_r_uv_sq += r_val*r_val;
+            sum_s_uv_sq += s_val*s_val;
+        }
+    }
+    return (2*sum_r_uv*sum_s_uv)/(sum_r_uv_sq+sum_s_uv_sq);
+}
+
+Point matchMOR(const Mat &outerFrameMatrix,const Mat &innerFrameMatrix, Mat &outResult)
+{
+    if(outerFrameMatrix.type() != CV_8UC1 || innerFrameMatrix.type() != CV_8UC1)
+        {printf("input Matrices dont have the correct type");}
+    Scalar_<uchar> meanOfOuterFrameMatrixScalar = mean(outerFrameMatrix);
+    uchar meanOfOuterFrameMatrix = meanOfOuterFrameMatrixScalar[0];
+    Scalar_<uchar> meanOfInnerFrameMatrixScalar = mean(innerFrameMatrix);
+    uchar meanOfInnerFrameMatrix = meanOfInnerFrameMatrixScalar[0];
+
+    int resultCols =  outerFrameMatrix.cols - innerFrameMatrix.cols + 1;
+    int resultRows = outerFrameMatrix.rows - innerFrameMatrix.rows + 1;
+
+    outResult = Mat(resultCols,resultRows,CV_32FC1);
+    Point offset((outerFrameMatrix.cols - outResult.cols)/2 + 1 ,(outerFrameMatrix.rows-outResult.rows)/2 + 1);
+
+    for(int y = offset.y, totalRowsToTraverse = outerFrameMatrix.rows - offset.y +1; y < totalRowsToTraverse; ++y)
+    {
+        for(int x = offset.x, totalColumnsToTraverse = outerFrameMatrix.cols - offset.x + 1; x < totalColumnsToTraverse; ++x)
+        {
+            outResult.at<float>(x-offset.x,y-offset.y) = Mor(outerFrameMatrix,innerFrameMatrix,x,y,float(meanOfOuterFrameMatrix),float(meanOfInnerFrameMatrix),innerFrameMatrix.cols,innerFrameMatrix.rows);
+        }
+    }
+    normalize( outResult, outResult, 0, 1, NORM_MINMAX, -1);
+
+    double maxVal;
+    Point maxLoc;
+    minMaxLoc( outResult, NULL, &maxVal, NULL, &maxLoc);
+
+    namedWindow("testMor",CV_WINDOW_AUTOSIZE);
+    Mat outResultZoomed(Point(256,256));
+    resize(outResult,outResultZoomed,Size(256,256));
+    imshow("testMor",outResultZoomed);
+
+    return maxLoc + offset;
+}
+
 Point matchSAD(const Mat &OuterFrameMatrix,const Mat &InnerFrameMatrix, Mat &outResult)
 {
     int outerX = OuterFrameMatrix.cols;
