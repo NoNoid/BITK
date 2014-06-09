@@ -19,3 +19,12 @@ void mouseCallBack(int event, int x, int y, int flags, void* userdata);
 VideoCapture webcam(const int cameraIndex = 0);
 
 VideoCapture videoFile(const std::string &videoFileName);
+
+struct mouseEventInformation
+{
+    mouseEventInformation(Rect* innerFrame, Size* videoDimensions, Rect* searchFrame)
+        : innerFrame(innerFrame), videoDimensions(videoDimensions), searchFrame(searchFrame){}
+    Rect* innerFrame;
+    Size* videoDimensions;
+    Rect* searchFrame;
+};

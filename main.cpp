@@ -7,7 +7,6 @@
 
 using namespace cv;
 
-
 int main(int, char**)
 {
     //diable printf() buffering
@@ -15,14 +14,14 @@ int main(int, char**)
     printf("press 'c' to close\n");
 
     bool useWebcam = false;
-    bool showResultOfMatching = false;
+    bool showResultOfMatching = true;
     VideoCapture videoHandle;
 
     if(useWebcam)
         {videoHandle = webcam();}
     else
     {
-        std::string videoFileName = "videos/trafficInChina.mp4";
+        std::string videoFileName = "videos/video_ampel1.mp4";
         videoHandle = videoFile(videoFileName);
     }
 
@@ -59,7 +58,8 @@ int main(int, char**)
         {bestMatchPositionsByFrame = new cv::Point[numberOfVideoFrames];}
 
     // Mouse Callback
-    setMouseCallback(drawFrameWindowName, mouseCallBack, (void*)&innerFrame);
+    mouseEventInformation mouseInfo(&innerFrame, &videoDimensions, &searchFrame);
+    setMouseCallback(drawFrameWindowName, mouseCallBack, (void*)&mouseInfo);
 
 //    Mat edges;
     double oldMinVal, oldMaxVal;
@@ -91,7 +91,7 @@ int main(int, char**)
         Mat outerFrameMatrix(frame,searchFrame);
 
         Mat result;
-        Point matchLocation = matchKKFMF(outerFrameMatrix,innerFrameMatrix, result);
+        Point matchLocation = matchKKFMF(outerFrameMatrix, innerFrameMatrix, result);
 
         // the returned matchLocation is in the wrong Coordinate System, we need to transform it back
         matchLocation.x += searchFrame.x;

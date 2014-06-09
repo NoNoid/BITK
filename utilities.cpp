@@ -88,7 +88,6 @@ void createNewInnerFrameFromMatchLocation(const Point &matchLoc,Rect &regionOfIn
 }
 
 Point buttonDownPosition(-1,-1);
-Point p1, p2;
 void mouseCallBack(int event, int x, int y, int flags, void* userdata)
 {
     // change size of innerFrame
@@ -96,36 +95,34 @@ void mouseCallBack(int event, int x, int y, int flags, void* userdata)
     {
         buttonDownPosition.x = x;
         buttonDownPosition.y = y;
-        p1 = Point(x,y);
     }
     if(buttonDownPosition.x != -1 && buttonDownPosition.y != -1)
     {
-        Rect* innerFrame = (Rect*)userdata;
+        mouseEventInformation* info = (mouseEventInformation*)userdata;
         if(x >= buttonDownPosition.x)
         {
-            innerFrame->x = buttonDownPosition.x;
-            innerFrame->width = std::max(1, x - buttonDownPosition.x);
+            info->innerFrame->x = buttonDownPosition.x;
+            info->innerFrame->width = std::max(1, x - buttonDownPosition.x);
         }
         else //(x < buttonDownPosition.x)
         {
-            innerFrame->x = x;
-            innerFrame->width = buttonDownPosition.x - x;
+            info->innerFrame->x = x;
+            info->innerFrame->width = buttonDownPosition.x - x;
         }
         if(y >= buttonDownPosition.y)
         {
-            innerFrame->y = buttonDownPosition.y;
-            innerFrame->height = std::max(1, y - buttonDownPosition.y);
+            info->innerFrame->y = buttonDownPosition.y;
+            info->innerFrame->height = std::max(1, y - buttonDownPosition.y);
         }
         else //(y < buttonDownPosition.y)
         {
-            innerFrame->y = y;
-            innerFrame->height = buttonDownPosition.y - y;
+            info->innerFrame->y = y;
+            info->innerFrame->height = buttonDownPosition.y - y;
         }
+        //info->searchFrame = createOuterFrameFromInnerFrame(*(info->innerFrame), *(info->videoDimensions));
     }
     if( event == EVENT_LBUTTONUP)
     {
-        Rect* innerFrame = (Rect*)userdata;
-        p2 = Point(x,y);
         buttonDownPosition.x = -1;
         buttonDownPosition.y = -1;
     }
