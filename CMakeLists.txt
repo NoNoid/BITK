@@ -9,7 +9,7 @@ find_package(OpenCV REQUIRED)
 
 include_directories(OpenCV_INCLUDE_DIRS)
 
-add_executable(BITK main.cpp)
+add_executable(BITK main.cpp match.cpp match.hpp utilities.cpp utilities.hpp)
 
 target_link_libraries(BITK ${OpenCV_LIBRARIES})
 
