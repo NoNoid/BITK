@@ -87,17 +87,47 @@ void createNewInnerFrameFromMatchLocation(const Point &matchLoc,Rect &regionOfIn
     clampRectangleToVideoDemensions(regionOfInterest,videoDimensions);
 }
 
+Point buttonDownPosition(-1,-1);
+Point p1, p2;
 void mouseCallBack(int event, int x, int y, int flags, void* userdata)
 {
+    // change size of innerFrame
     if  ( event == EVENT_LBUTTONDOWN )
     {
-        Rect* innerFrame = (Rect*)userdata;
-        innerFrame->x = x - innerFrame->width / 2;
-        innerFrame->y = y - innerFrame->height / 2;
+        buttonDownPosition.x = x;
+        buttonDownPosition.y = y;
+        p1 = Point(x,y);
     }
-    else if( event == EVENT_LBUTTONUP)
+    if(buttonDownPosition.x != -1 && buttonDownPosition.y != -1)
     {
-
+        Rect* innerFrame = (Rect*)userdata;
+        if(x >= buttonDownPosition.x)
+        {
+            innerFrame->x = buttonDownPosition.x;
+            innerFrame->width = std::max(1, x - buttonDownPosition.x);
+        }
+        else //(x < buttonDownPosition.x)
+        {
+            innerFrame->x = x;
+            innerFrame->width = buttonDownPosition.x - x;
+        }
+        if(y >= buttonDownPosition.y)
+        {
+            innerFrame->y = buttonDownPosition.y;
+            innerFrame->height = std::max(1, y - buttonDownPosition.y);
+        }
+        else //(y < buttonDownPosition.y)
+        {
+            innerFrame->y = y;
+            innerFrame->height = buttonDownPosition.y - y;
+        }
+    }
+    if( event == EVENT_LBUTTONUP)
+    {
+        Rect* innerFrame = (Rect*)userdata;
+        p2 = Point(x,y);
+        buttonDownPosition.x = -1;
+        buttonDownPosition.y = -1;
     }
 }
 
