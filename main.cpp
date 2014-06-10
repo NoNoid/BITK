@@ -39,7 +39,8 @@ int main(int, char**)
     std::string drawFrameWindowName("drawFrame"),outerFrameWindowName("outerFrame"),matchingWindowName("resultOfMatching");
 
     namedWindow(drawFrameWindowName,CV_WINDOW_AUTOSIZE);
-    namedWindow(outerFrameWindowName,CV_WINDOW_AUTOSIZE);
+    cvMoveWindow(drawFrameWindowName.c_str(),0,0);
+    namedWindow(outerFrameWindowName,CV_WINDOW_AUTOSIZE);    
     cvMoveWindow(outerFrameWindowName.c_str(), videoDimensions.width+55, 50);
     if(showResultOfMatching)
     {
