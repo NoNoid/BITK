@@ -90,14 +90,17 @@ Point matchMOR(const Mat &outerFrameMatrix,const Mat &innerFrameMatrix, Mat &out
         return Point(0,0);
     }
 
-    outResult = Mat(resultCols,resultRows,CV_32FC1);
-    Point offset((outerFrameMatrix.cols - outResult.cols)/2 + 1 ,(outerFrameMatrix.rows-outResult.rows)/2 + 1);
+    outResult = Mat(resultRows,resultCols,CV_32FC1);
+    Point offset(
+                (outerFrameMatrix.cols - outResult.cols)/2 + 1,
+                (outerFrameMatrix.rows - outResult.rows)/2 + 1
+            );
 
-    for(int y = offset.y, totalRowsToTraverse = outerFrameMatrix.rows - offset.y +1; y < totalRowsToTraverse; ++y)
+    for(int y = offset.y, totalRows = outResult.rows+offset.y; y < totalRows; ++y)
     {
-        for(int x = offset.x, totalColumnsToTraverse = outerFrameMatrix.cols - offset.x + 1; x < totalColumnsToTraverse; ++x)
+        for(int x = offset.x, totalCols = outResult.cols+offset.x; x < totalCols; ++x)
         {
-            outResult.at<float>(x-offset.x,y-offset.y) = Mor(outerFrameMatrix,innerFrameMatrix,x,y,float(meanOfOuterFrameMatrix),float(meanOfInnerFrameMatrix),innerFrameMatrix.cols,innerFrameMatrix.rows);
+            outResult.at<float>(y-offset.y,x-offset.x) = Mor(outerFrameMatrix,innerFrameMatrix,y,x,float(meanOfOuterFrameMatrix),float(meanOfInnerFrameMatrix),innerFrameMatrix.cols,innerFrameMatrix.rows);
         }
     }
     normalize( outResult, outResult, 0, 1, NORM_MINMAX, -1);
