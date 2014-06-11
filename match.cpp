@@ -1,4 +1,5 @@
 #include "match.hpp"
+#include "utilities.hpp"
 #include <stdio.h>
 
 //using namespace cv;
@@ -63,6 +64,12 @@ float Mor(const Mat& sm, const Mat& rm, int x,int y, float rMean_new, float sMea
     return (2*sum_r_uv*sum_s_uv)/(sum_r_uv_sq+sum_s_uv_sq);
 }
 
+void drawBestMatchlocationInResult(const Point &maxLoc, Mat &outResult)
+{
+    cvtColor(outResult,outResult,CV_GRAY2BGR);
+    DrawPoint(outResult,maxLoc,Scalar(0,0,255));
+}
+
 Point matchMOR(const Mat &outerFrameMatrix,const Mat &innerFrameMatrix, Mat &outResult)
 {
     if(outerFrameMatrix.type() != CV_8UC1 || innerFrameMatrix.type() != CV_8UC1)
@@ -91,10 +98,7 @@ Point matchMOR(const Mat &outerFrameMatrix,const Mat &innerFrameMatrix, Mat &out
     Point maxLoc;
     minMaxLoc( outResult, NULL, &maxVal, NULL, &maxLoc);
 
-    namedWindow("testMor",CV_WINDOW_AUTOSIZE);
-    Mat outResultZoomed(Point(256,256));
-    resize(outResult,outResultZoomed,Size(256,256));
-    imshow("testMor",outResultZoomed);
+    drawBestMatchlocationInResult(maxLoc, outResult);
 
     return maxLoc + offset;
 }
