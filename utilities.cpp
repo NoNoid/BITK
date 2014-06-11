@@ -1,5 +1,6 @@
 #include "utilities.hpp"
 #include <stdio.h>
+#include <cassert>
 
 #ifdef WINDOWS
     #include <direct.h>
@@ -121,12 +122,15 @@ void mouseCallBack(int event, int x, int y, int flags, void* userdata)
         }
 
         *(info->searchFrame) = createOuterFrameFromInnerFrame(*(info->innerFrame), *(info->videoDimensions));
+
+        assert(info->searchFrame->width >= 0 || info->searchFrame->height >= 0 || info->innerFrame->width >= 0 || info->innerFrame->height >= 0 || info->searchFrame->width > info->innerFrame->width || info->searchFrame->height > info->innerFrame->height);
     }
     if( event == EVENT_LBUTTONUP)
     {
         buttonDownPosition.x = -1;
         buttonDownPosition.y = -1;
     }
+
 }
 
 VideoCapture webcam(const int cameraIndex)
