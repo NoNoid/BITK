@@ -102,24 +102,25 @@ void mouseCallBack(int event, int x, int y, int flags, void* userdata)
         if(x >= buttonDownPosition.x)
         {
             info->innerFrame->x = buttonDownPosition.x;
-            info->innerFrame->width = std::max(1, x - buttonDownPosition.x);
+            info->innerFrame->width = (std::max(8, x - buttonDownPosition.x)) & ~1;
         }
         else //(x < buttonDownPosition.x)
         {
             info->innerFrame->x = x;
-            info->innerFrame->width = buttonDownPosition.x - x;
+            info->innerFrame->width = (std::max(8,buttonDownPosition.x - x)) & ~1;
         }
         if(y >= buttonDownPosition.y)
         {
             info->innerFrame->y = buttonDownPosition.y;
-            info->innerFrame->height = std::max(1, y - buttonDownPosition.y);
+            info->innerFrame->height = (std::max(8, y - buttonDownPosition.y)) & ~1;
         }
         else //(y < buttonDownPosition.y)
         {
             info->innerFrame->y = y;
-            info->innerFrame->height = buttonDownPosition.y - y;
+            info->innerFrame->height = (std::max(8,buttonDownPosition.y - y)) & ~1;
         }
-        //info->searchFrame = createOuterFrameFromInnerFrame(*(info->innerFrame), *(info->videoDimensions));
+
+        *(info->searchFrame) = createOuterFrameFromInnerFrame(*(info->innerFrame), *(info->videoDimensions));
     }
     if( event == EVENT_LBUTTONUP)
     {
