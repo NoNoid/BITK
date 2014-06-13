@@ -101,11 +101,7 @@ int main(int, char**)
 
         DrawPoint(drawFrame,matchLocation,Scalar(0,0,255));
 
-
-        //
         createNewInnerFrameFromMatchLocation(matchLocation, innerFrame, videoDimensions);
-        innerFrameMatrix = Mat(frame,innerFrame);
-
 
         Mat outerFrameZoomed(Point(256,256));
         resize(Mat(drawFrame,searchFrame),outerFrameZoomed,Size(256,256));
@@ -142,6 +138,8 @@ int main(int, char**)
             }
         }
         if(stopTheProgramm) break;
+
+        innerFrameMatrix = Mat(frame,innerFrame);
     }
 
     if(!useWebcam)
