@@ -11,7 +11,7 @@ int main(int, char**)
 {
     //diable printf() buffering
     setbuf(stdout, NULL);
-    printf("press 'c' to close\n");
+    printf("press 'q' to quit\n");
 
     bool useWebcam = false;
     bool showResultOfMatching = true;
@@ -71,7 +71,7 @@ int main(int, char**)
     cv::cvtColor(frame,frame,CV_BGR2GRAY);
     Mat innerFrameMatrix(frame,innerFrame);
 
-    for(unsigned int i = 1; useWebcam ? true :i < numberOfVideoFrames; ++i)
+    for(unsigned int i = 1; useWebcam ? true :i < numberOfVideoFrames && !stopTheProgramm; ++i)
     {
         // get a new frame from camera
         videoHandle >> frame;
@@ -117,27 +117,23 @@ int main(int, char**)
         imshow(drawFrameWindowName,drawFrame);
         if(!useWebcam)
         {
-            int key = waitKey(0);
+            char key = waitKey(0);
             switch(key)
             {
-            case ' ':
-                continue;
-                break;
-            case 'c':
+            case 'q':
                 stopTheProgramm = true;
                 break;
             }
         }else
         {
-            int key = waitKey(1);
+            char key = waitKey(1);
             switch(key)
             {
-            case 'c':
+            case 'q':
                 stopTheProgramm = true;
                 break;
             }
         }
-        if(stopTheProgramm) break;
 
         innerFrameMatrix = Mat(frame,innerFrame);
     }
