@@ -50,7 +50,7 @@ int main(int, char**)
 
     // define location of sub matrices in image
     Rect innerFrame( videoDimensions.width/2-100, videoDimensions.height/2-50, 16, 16 );
-    Scalar outerFrame(255,0,0);
+    Scalar innerFrameColor(255,0,0);
     Rect searchFrame;
     Scalar searchFrameColor(0,255,0);
 
@@ -84,7 +84,7 @@ int main(int, char**)
 
         DrawPoint(drawFrame,oldMatchLocation,Scalar(0,255,255));
 
-        drawRectangle(innerFrame,drawFrame,outerFrame);
+        drawRectangle(innerFrame,drawFrame,innerFrameColor);
 
 
         searchFrame = createOuterFrameFromInnerFrame(innerFrame,videoDimensions);
