@@ -16,22 +16,62 @@ int main(int, char**)
     return 0;
 }
 
+void getUserInput(bool &useWebCam, method &correlationMethod)
+{
+    std::string inString;
+    std::cout << "use Webcam? (y/n)\n";
+    std::cin >> inString;
+
+    useWebCam = inString[0] == 'y' ? true : false;
+
+    std::cout << "[1]: summed absolute Difference (SAD)\n"
+              << "[2]: summed squared Diffenence (SSD)\n"
+              << "[3]: normalized mean free crosscorrelation (KKFMF)\n"
+              << "[4]: correlation of Moravec (MOR)\n";
+    std::cin >> inString;
+    correlationMethod;
+    switch(inString[0])
+    {
+    case '1':   correlationMethod = SAD; break;
+    case '2':   correlationMethod = SSD; break;
+    case '3':   correlationMethod = KKFMF; break;
+    case '4':   correlationMethod = MOR; break;
+    default:    correlationMethod = KKFMF; break;
+    }
+}
+
 bool programm()
 {
     //diable printf() buffering
     setbuf(stdout, NULL);
-    printf("press 'q' to quit\n");
+    printf("press 'q' to quit, press 'r' to restart\n");
 
-    bool useWebcam = false;
+    bool useWebcam;
+    method correlationMethod;
+    getUserInput(useWebcam, correlationMethod);
     bool showResultOfMatching = true;
+
     VideoCapture videoHandle;
 
     if(useWebcam)
         {videoHandle = webcam();}
     else
     {
-        std::string videoFileName = "videos/video_ampel1.mp4";
-        videoHandle = videoFile(videoFileName);
+        string filename;
+        std::cout << "filename?\n";
+        getline(std::cin,filename);
+        getline(std::cin,filename);
+
+        std::string videoFileName = std::string("videos/") + filename + std::string(".mp4");
+        try
+        {
+            videoHandle = videoFile(videoFileName);
+        }
+        catch(...)
+        {
+            videoFileName = "videos/trafficInChina.mp4";
+            videoHandle = videoFile(videoFileName);
+        }
     }
 
     Size videoDimensions = Size((int) videoHandle.get(CV_CAP_PROP_FRAME_WIDTH),
@@ -102,7 +142,16 @@ bool programm()
         Mat outerFrameMatrix(frame,searchFrame);
 
         Mat result;
-        Point matchLocation = match(outerFrameMatrix, innerFrameMatrix, result);
+        Point matchLocation;
+        switch(correlationMethod)
+        {
+        case SAD:   matchLocation = matchSAD(outerFrameMatrix, innerFrameMatrix, result);   break;
+        case SSD:   matchLocation = matchSSD(outerFrameMatrix, innerFrameMatrix, result);   break;
+        case KKFMF: matchLocation = matchKKFMF(outerFrameMatrix, innerFrameMatrix, result); break;
+        case MOR:   matchLocation = matchMOR(outerFrameMatrix, innerFrameMatrix, result);   break;
+        default:    matchLocation = match(outerFrameMatrix, innerFrameMatrix, result);      break;
+        }
+
 
         // the returned matchLocation is in the wrong Coordinate System, we need to transform it back
         matchLocation.x += searchFrame.x;
@@ -140,6 +189,18 @@ bool programm()
         case 'r':
             resetTheProgramm = true;
             break;
+        case '1':
+            correlationMethod = SAD;
+            break;
+        case '2':
+            correlationMethod = SSD;
+            break;
+        case '3':
+            correlationMethod = KKFMF;
+            break;
+        case '4':
+            correlationMethod = MOR;
+            break;
         }
 
         innerFrameMatrix = Mat(frame,innerFrame);
@@ -147,6 +208,12 @@ bool programm()
 
     if(!useWebcam)
         {delete[] bestMatchPositionsByFrame;}
+
+    /* anyhow this doesn't work
+    cvDestroyWindow(drawFrameWindowName.c_str());
+    cvDestroyWindow(outerFrameWindowName.c_str());
+    cvDestroyWindow(matchingWindowName.c_str());
+    */
 
     // the camera will be deinitialized automatically in VideoCapture destructor
     return resetTheProgramm;

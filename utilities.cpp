@@ -154,8 +154,9 @@ VideoCapture videoFile(const std::string &videoFileName)
 
     if(!videoHandle.isOpened())  // check if we succeeded
     {
-        printf ("Could not find File: %s/%s\n", cCurrentPath,videoFileName.c_str());
-        exit(-1);
+        throw("Could not find File: %s/%s\n", cCurrentPath,videoFileName.c_str());
+        //printf ("Could not find File: %s/%s\n", cCurrentPath,videoFileName.c_str());
+        //exit(-1);
     }else{
         printf ("Successfully loaded File: %s/%s\n", cCurrentPath,videoFileName.c_str());
     }
