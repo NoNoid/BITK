@@ -114,6 +114,68 @@ Point matchMOR(const Mat &outerFrameMatrix,const Mat &innerFrameMatrix, Mat &out
     return maxLoc + offset;
 }
 
+float SSD(const Mat& sm, const Mat& rm, int x,int y, float rMean_new, float sMean_old, int umax_width, int vmax_height)
+{
+    float sum_diff_r_s_sq = 0;
+
+    for(int u = -umax_width/2; u < umax_width/2; u++)
+    {
+        for(int v = -vmax_height/2; v < vmax_height/2; v++)
+        {
+            float r_val = float(rm.at<uchar>(u,v)) - rMean_new;
+            float s_val = float(sm.at<uchar>(x+u,y+v)) - sMean_old;
+            float diff_r_s = r_val -s_val;
+            float diff_r_s_sq = diff_r_s * diff_r_s;
+            sum_diff_r_s_sq += diff_r_s_sq;
+        }
+    }
+    return sum_diff_r_s_sq;
+}
+
+Point matchSSD(const Mat &outerFrameMatrix,const Mat &innerFrameMatrix, Mat &outResult)
+{
+    if(outerFrameMatrix.type() != CV_8UC1 || innerFrameMatrix.type() != CV_8UC1)
+        {printf("input Matrices dont have the correct type\n");}
+    if(innerFrameMatrix.cols%2 != 0 || innerFrameMatrix.rows%2 != 0 || outerFrameMatrix.cols%2 != 0 || outerFrameMatrix.rows%2 != 0)
+        {printf("cols/rows are odd ic: %d, ir: %d, oc: %d or:%d\n",innerFrameMatrix.cols,innerFrameMatrix.rows,outerFrameMatrix.cols,outerFrameMatrix.rows); }
+    Scalar_<uchar> meanOfOuterFrameMatrixScalar = mean(outerFrameMatrix);
+    uchar meanOfOuterFrameMatrix = meanOfOuterFrameMatrixScalar[0];
+    Scalar_<uchar> meanOfInnerFrameMatrixScalar = mean(innerFrameMatrix);
+    uchar meanOfInnerFrameMatrix = meanOfInnerFrameMatrixScalar[0];
+
+    int resultCols =  outerFrameMatrix.cols - innerFrameMatrix.cols + 1;
+    int resultRows = outerFrameMatrix.rows - innerFrameMatrix.rows + 1;
+    if(resultCols < 0 || resultRows < 0 )
+    {
+        printf("Inner greater than Outer\n");
+        outResult = Mat(10,10,CV_32FC1);
+        return Point(0,0);
+    }
+
+    outResult = Mat(resultRows,resultCols,CV_32FC1);
+    Point offset(
+                (outerFrameMatrix.cols - outResult.cols)/2 + 1,
+                (outerFrameMatrix.rows - outResult.rows)/2 + 1
+            );
+
+    for(int y = offset.y, totalRows = outResult.rows+offset.y; y < totalRows; ++y)
+    {
+        for(int x = offset.x, totalCols = outResult.cols+offset.x; x < totalCols; ++x)
+        {
+            outResult.at<float>(y-offset.y,x-offset.x) = SSD(outerFrameMatrix,innerFrameMatrix,y,x,float(meanOfOuterFrameMatrix),float(meanOfInnerFrameMatrix),innerFrameMatrix.cols,innerFrameMatrix.rows);
+        }
+    }
+    normalize( outResult, outResult, 0, 1, NORM_MINMAX, -1);
+
+    double maxVal;
+    Point maxLoc;
+    minMaxLoc( outResult, NULL, &maxVal, NULL, &maxLoc);
+
+    drawBestMatchlocationInResult(maxLoc, outResult);
+
+    return maxLoc + offset;
+}
+
 Point matchSAD(const Mat &OuterFrameMatrix,const Mat &InnerFrameMatrix, Mat &outResult)
 {
     int outerX = OuterFrameMatrix.cols;
