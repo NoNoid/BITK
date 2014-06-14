@@ -7,7 +7,16 @@
 
 using namespace cv;
 
+bool programm();
+
 int main(int, char**)
+{
+    // programm returns true, if it wants to be restarted
+    while(programm());
+    return 0;
+}
+
+bool programm()
 {
     //diable printf() buffering
     setbuf(stdout, NULL);
@@ -40,7 +49,7 @@ int main(int, char**)
 
     namedWindow(drawFrameWindowName,CV_WINDOW_AUTOSIZE);
     cvMoveWindow(drawFrameWindowName.c_str(),0,0);
-    namedWindow(outerFrameWindowName,CV_WINDOW_AUTOSIZE);    
+    namedWindow(outerFrameWindowName,CV_WINDOW_AUTOSIZE);
     cvMoveWindow(outerFrameWindowName.c_str(), videoDimensions.width+55, 50);
     if(showResultOfMatching)
     {
@@ -66,12 +75,13 @@ int main(int, char**)
     double oldMinVal, oldMaxVal;
     Point oldMinLoc, oldMaxLoc, oldMatchLocation;
     bool stopTheProgramm = false;
+    bool resetTheProgramm = false;
     Mat frame;
     videoHandle >> frame;
     cv::cvtColor(frame,frame,CV_BGR2GRAY);
     Mat innerFrameMatrix(frame,innerFrame);
 
-    for(unsigned int i = 1; useWebcam ? true :i < numberOfVideoFrames && !stopTheProgramm; ++i)
+    for(unsigned int i = 1; (useWebcam ? true :i < numberOfVideoFrames) && !stopTheProgramm && !resetTheProgramm; ++i)
     {
         // get a new frame from camera
         videoHandle >> frame;
@@ -92,7 +102,7 @@ int main(int, char**)
         Mat outerFrameMatrix(frame,searchFrame);
 
         Mat result;
-        Point matchLocation = matchKKFMF(outerFrameMatrix, innerFrameMatrix, result);
+        Point matchLocation = match(outerFrameMatrix, innerFrameMatrix, result);
 
         // the returned matchLocation is in the wrong Coordinate System, we need to transform it back
         matchLocation.x += searchFrame.x;
@@ -115,24 +125,21 @@ int main(int, char**)
         }
 
         imshow(drawFrameWindowName,drawFrame);
+        // let the user interact with the programm
+        char key;
         if(!useWebcam)
+            key = waitKey(0);
+        else
+            key = waitKey(1);
+
+        switch(key)
         {
-            char key = waitKey(0);
-            switch(key)
-            {
-            case 'q':
-                stopTheProgramm = true;
-                break;
-            }
-        }else
-        {
-            char key = waitKey(1);
-            switch(key)
-            {
-            case 'q':
-                stopTheProgramm = true;
-                break;
-            }
+        case 'q':
+            stopTheProgramm = true;
+            break;
+        case 'r':
+            resetTheProgramm = true;
+            break;
         }
 
         innerFrameMatrix = Mat(frame,innerFrame);
@@ -142,6 +149,6 @@ int main(int, char**)
         {delete[] bestMatchPositionsByFrame;}
 
     // the camera will be deinitialized automatically in VideoCapture destructor
-    return 0;
+    return resetTheProgramm;
 }
 

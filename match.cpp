@@ -224,7 +224,7 @@ Point matchKKFMF(const Mat &OuterFrameMatrix,const Mat &InnerFrameMatrix, Mat &o
                     Point posInOuterFrame = Point(leftUpperX + offsetX, leftUpperY + offsetY);
                     Point posInInnerFrame = Point(offsetX, offsetY);
                     float outerValue = (OuterFrameMatrix.at<uchar>(posInOuterFrame) - outerMeanValue) / outerMeanValue;
-                    float innerValue = (InnerFrameMatrix.at<uchar>(posInInnerFrame) - innerMeanValue) / outerMeanValue;
+                    float innerValue = (InnerFrameMatrix.at<uchar>(posInInnerFrame) - innerMeanValue) / innerMeanValue;
                     similarity += outerValue * innerValue;
                 }
             }
