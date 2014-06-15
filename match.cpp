@@ -70,7 +70,7 @@ float Mor(const Mat& sm, const Mat& rm, int x,int y, float rMean_new, float sMea
     return (2*sum_r_uv*sum_s_uv)/(sum_r_uv_sq+sum_s_uv_sq);
 }
 
-Point matchMOR(const Mat &outerFrameMatrix,const Mat &innerFrameMatrix, Mat &outResult)
+/*Point matchMOR(const Mat &outerFrameMatrix,const Mat &innerFrameMatrix, Mat &outResult)
 {
     if(outerFrameMatrix.type() != CV_8UC1 || innerFrameMatrix.type() != CV_8UC1)
         {printf("input Matrices dont have the correct type\n");}
@@ -112,7 +112,7 @@ Point matchMOR(const Mat &outerFrameMatrix,const Mat &innerFrameMatrix, Mat &out
     drawBestMatchlocationInResult(maxLoc, outResult);
 
     return maxLoc + offset;
-}
+}*/
 
 //float SSD(const Mat& sm, const Mat& rm, int x,int y, float rMean_new, float sMean_old, int umax_width, int vmax_height)
 //{
@@ -391,6 +391,65 @@ Point matchKKFMF(const Mat &OuterFrameMatrix,const Mat &InnerFrameMatrix, Mat &o
                     similarity += outerValue * innerValue;
                 }
             }
+            if(similarity > maxSimilarity)
+            {
+                maxSimilarity = similarity;
+                // get the mid-Point of the innerFrame in outerFrame-Coordinates
+                posMaxSimilarityInOuterFrame = Point(leftUpperX + innerX/2, leftUpperY + innerY/2);
+            }
+            //result[leftUpperX + leftUpperY * resultCols] = similarity;
+            outResult.at<float>(leftUpperY,leftUpperX) = similarity;
+        }
+    }
+
+    //minDifference, result hold additional information
+    //outResult = Mat(resultCols, resultRows, CV_32FC1, result);
+    normalize( outResult, outResult, 0, 1, NORM_MINMAX, -1, Mat());
+    return posMaxSimilarityInOuterFrame;
+}
+
+
+Point matchMOR(const Mat &OuterFrameMatrix,const Mat &InnerFrameMatrix, Mat &outResult)
+{
+    int outerX = OuterFrameMatrix.cols;
+    int outerY = OuterFrameMatrix.rows;
+    float outerMeanValue = meanValue(OuterFrameMatrix);
+
+    int innerX = InnerFrameMatrix.cols;
+    int innerY = InnerFrameMatrix.rows;
+    float innerMeanValue = meanValue(InnerFrameMatrix);
+
+    int resultCols =  OuterFrameMatrix.cols - InnerFrameMatrix.cols + 1;
+    int resultRows = OuterFrameMatrix.rows - InnerFrameMatrix.rows + 1;
+    //float result[resultCols * resultRows];
+
+    float maxSimilarity = FLT_MIN;
+    Point posMaxSimilarityInOuterFrame;
+
+    outResult = Mat(resultRows, resultCols, CV_32FC1);
+
+    for(int leftUpperY = 0; leftUpperY <= outerY - innerY; leftUpperY++)
+    {
+        for(int leftUpperX = 0; leftUpperX <= outerX - innerX; leftUpperX++)
+        {
+
+            float innerSum = 0;
+            float outerSum = 0;
+            float similarity = 0;
+            for(int offsetX = 0; offsetX <= innerX; offsetX++)
+            {
+                for(int offsetY = 0; offsetY <= innerY; offsetY++)
+                {
+                    Point posInOuterFrame = Point(leftUpperX + offsetX, leftUpperY + offsetY);
+                    Point posInInnerFrame = Point(offsetX, offsetY);
+                    float outerValue = (OuterFrameMatrix.at<uchar>(posInOuterFrame) - outerMeanValue);
+                    float innerValue = (InnerFrameMatrix.at<uchar>(posInInnerFrame) - innerMeanValue);
+                    similarity += outerValue * innerValue;
+                    innerSum += innerValue*innerValue;
+                    outerSum += outerValue*outerValue;
+                }
+            }
+            similarity = 2*similarity / (innerSum * outerSum);
             if(similarity > maxSimilarity)
             {
                 maxSimilarity = similarity;
